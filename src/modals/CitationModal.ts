@@ -1,6 +1,7 @@
 // cite-wide/src/modals/CitationModal.ts
 import { App, Modal, Notice, Editor } from 'obsidian';
-import { citationService, type CitationGroup } from '../services/citationService';
+import { citationService } from '../services/citationService';
+import type { CitationGroup, CitationMatch } from '../services/citationService';
 
 export class CitationModal extends Modal {
     private editor: Editor;
@@ -108,7 +109,7 @@ export class CitationModal extends Modal {
         });
 
         // Add each citation instance
-        group.matches.forEach((match, matchIndex) => {
+        group.matches.forEach((match: CitationMatch, matchIndex: number) => {
             const isRefSource = match.isReferenceSource === true;
             const instanceEl = content.createDiv(`cite-wide-instance ${isRefSource ? 'cite-wide-reference-source' : ''}`);
             
@@ -200,12 +201,18 @@ export class CitationModal extends Modal {
             const cursor = this.editor.getCursor();
             
             // Convert just this specific instance
-            const result = citationService.convertCitation(
-                this.content,
-                group.number,
-                undefined, // Let it generate a new hex ID
-                matchIndex // Convert only this specific instance
-            );
+            // For single instance conversion, we'll process the content directly
+            // since our new implementation doesn't support direct match indexing
+            const hexId = citationService.getNewHexId();
+            const before = this.content.substring(0, match.index);
+            const after = this.content.substring(match.index + match.original.length);
+            const updatedContent = `${before}[^${hexId}]${after}`;
+            
+            const result = {
+                content: updatedContent,
+                changed: true,
+                stats: { citationsConverted: 1 }
+            };
 
             if (result.changed) {
                 // Update the content
