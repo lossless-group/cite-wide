@@ -2,6 +2,7 @@ import { Notice, Plugin, Editor } from 'obsidian';
 import { citationService } from './src/services/citationService';
 import { CitationModal } from './src/modals/CitationModal';
 import { cleanReferencesSectionService } from './src/services/cleanReferencesSectionService';
+import { formatLinksInSelection } from './src/services/linkSyntaxService';
 
 export default class CiteWidePlugin extends Plugin {
     async onload(): Promise<void> {
@@ -12,6 +13,7 @@ export default class CiteWidePlugin extends Plugin {
         this.registerCitationCommands();
         this.registerReferenceCleanupCommands();
         this.registerCitationFormattingCommands();
+        this.registerLinkFormattingCommands();
     }
     
     private async loadStyles() {
@@ -149,6 +151,17 @@ export default class CiteWidePlugin extends Plugin {
                 } else {
                     new Notice('No citations needed formatting');
                 }
+            }
+        });
+    }
+
+    private registerLinkFormattingCommands(): void {
+        // Command to format links in the selected text
+        this.addCommand({
+            id: 'format-reference-links',
+            name: 'Format Reference Links in Selection',
+            editorCallback: (editor: Editor) => {
+                formatLinksInSelection(editor);
             }
         });
     }
