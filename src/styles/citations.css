@@ -2,7 +2,9 @@
 
 .cite-wide-modal {
     padding: 1.5rem;
-    max-width: 800px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     margin: 0 auto;
 }
 
@@ -14,6 +16,8 @@
 
 .cite-wide-container {
     margin-top: 1rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .cite-wide-group {

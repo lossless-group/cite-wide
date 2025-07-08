@@ -16,6 +16,21 @@ export class CitationModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         contentEl.empty();
+        
+        // Make the modal wider
+        const modalContainer = contentEl.closest('.modal-container') as HTMLElement;
+        const modalContent = contentEl.closest('.modal-content') as HTMLElement;
+        
+        if (modalContainer && modalContent) {
+            // Set the modal container to be very wide
+            modalContainer.style.width = '95vw';
+            modalContainer.style.maxWidth = 'none';
+            
+            // Ensure the content takes full width
+            modalContent.style.width = '100%';
+            modalContent.style.maxWidth = 'none';
+        }
+        
         contentEl.addClass('cite-wide-modal');
 
         // Find all citation groups
@@ -259,12 +274,69 @@ export class CitationModal extends Modal {
     }
 
     private scrollToLine(lineNumber: number) {
-        this.editor.setCursor({ line: lineNumber, ch: 0 });
-        this.editor.scrollIntoView({
-            from: { line: Math.max(0, lineNumber - 2), ch: 0 },
-            to: { line: lineNumber + 2, ch: 0 }
-        }, true);
-        this.close();
+        try {
+            // Get the line content
+            const lineContent = this.editor.getLine(lineNumber);
+            
+            // Find the citation pattern in the line (matches [1], [2], etc.)
+            const citationMatch = lineContent.match(/\[(\d+)\]/);
+            
+            if (citationMatch) {
+                const citationText = citationMatch[0];
+                const startPos = citationMatch.index || 0;
+                const endPos = startPos + citationText.length;
+                
+                // Create positions for the citation
+                const from = { line: lineNumber, ch: startPos };
+                const to = { line: lineNumber, ch: endPos };
+                
+                // Set cursor to the start of the citation and select it
+                this.editor.setCursor(from);
+                this.editor.setSelection(from, to);
+                
+                // Scroll to make the citation visible with some context
+                const fromLine = Math.max(0, lineNumber - 2);
+                const toLine = lineNumber + 2;
+                
+                // Create a range for the context area
+                const contextRange = {
+                    from: { line: fromLine, ch: 0 },
+                    to: { line: toLine, ch: 0 }
+                };
+                
+                // Scroll to show the context area
+                this.editor.scrollIntoView(contextRange, true);
+                
+                // Then scroll to show the selection
+                this.editor.scrollIntoView({ from, to }, true);
+                
+                // Focus the editor to show the selection
+                this.editor.focus();
+                
+            } else {
+                // Fallback to just scrolling to the line if no citation pattern is found
+                const pos = { line: lineNumber, ch: 0 };
+                this.editor.setCursor(pos);
+                
+                // Create a range for the context area
+                const contextRange = {
+                    from: { line: Math.max(0, lineNumber - 2), ch: 0 },
+                    to: { line: lineNumber + 2, ch: 0 }
+                };
+                
+                this.editor.scrollIntoView(contextRange, true);
+                this.editor.focus();
+            }
+            
+            // Close the modal after a short delay to ensure the selection is visible
+            setTimeout(() => {
+                this.close();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Error scrolling to line:', error);
+            this.close();
+        }
     }
 
     onClose() {
