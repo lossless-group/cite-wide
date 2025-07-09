@@ -27,9 +27,6 @@ export class CitationService {
     private usedHexIds: Set<string> = new Set();
 
     /**
-     * Generate a unique hex ID for citations
-     */
-    /**
      * @deprecated Use generateHexId instead
      */
     public getNewHexId(): string {
