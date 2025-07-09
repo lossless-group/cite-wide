@@ -59,27 +59,57 @@ export class CitationService {
         return this.extractCitations(content);
     }
 
-    private extractCitations(content: string): CitationGroup[] {
-        const citationPattern = /\[(\d+)\]/g;
-        const matches: CitationMatch[] = [];
-        const lines = content.split('\n');
+    public extractCitations(content: string): CitationGroup[] {
+        const citationPattern = /\[(\d+)\](?!:)/g; // Only match citations, not references
+        // Updated to match references with or without colons, and capture the entire reference text
+        const referencePattern = /^\s*\[(\d+)\]:?\s*([\s\S]*?)(?=\n\s*\[\d+\]:|\n\s*$|$)/gm;
         
-        // Find all citation matches
+        const matches: CitationMatch[] = [];
+        const referenceMap = new Map<string, string>();
+        
+        // First, extract all reference texts
+        let refMatch;
+        while ((refMatch = referencePattern.exec(content)) !== null) {
+            const [_, number, refText] = refMatch;
+            if (number) {
+                // Preserve the reference text exactly as is, including any colons and whitespace
+                const fullMatch = refMatch[0].trim();
+                const refValue = fullMatch.includes(':') 
+                    ? fullMatch.split(':', 2)[1].trim() 
+                    : fullMatch.replace(/^\s*\[\d+\]\s*/, '').trim();
+                referenceMap.set(number, refValue);
+            }
+        }
+
+        // Then find all citation matches
+        const lines = content.split('\n');
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i] || '';
-            let match;
+            const line = lines[i];
             
+            if (!line) continue;
+            
+            // Skip lines that are reference definitions
+            if (/^\s*\[\d+\]:/.test(line)) continue;
+            
+            let match;
             while ((match = citationPattern.exec(line)) !== null) {
                 if (match[1]) {
-                    const index = content.indexOf(match[0], content.indexOf(line) + match.index);
-                    matches.push({
-                        number: match[1],
-                        original: match[0],
-                        index,
-                        lineContent: line,
-                        lineNumber: i + 1,
-                        isReference: false
-                    });
+                    if (match[0] && match[1]) {
+                        const lineIndex = content.indexOf(line);
+                        const matchIndex = lineIndex >= 0 ? lineIndex + (match.index || 0) : 0;
+                        const index = content.indexOf(match[0], matchIndex);
+                        
+                        if (index >= 0) {
+                            matches.push({
+                                number: match[1],
+                                original: match[0],
+                                index,
+                                lineContent: line,
+                                lineNumber: i + 1,
+                                isReference: false
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -89,40 +119,31 @@ export class CitationService {
         
         for (const match of matches) {
             if (!groups.has(match.number)) {
+                const referenceText = referenceMap.get(match.number) || '';
                 groups.set(match.number, {
                     number: match.number,
-                    matches: []
+                    matches: [],
+                    referenceText: referenceText
                 });
             }
             groups.get(match.number)?.matches.push(match);
         }
 
-        // First, sort all matches by their position in the document
+        // Mark the last occurrence of each citation as the reference
         const allMatches = Array.from(matches).sort((a, b) => a.index - b.index);
         const lastOccurrences = new Map<string, CitationMatch>();
         
-        // Find the last occurrence of each citation number
         for (const match of allMatches) {
             lastOccurrences.set(match.number, match);
         }
         
-        // Mark the last occurrence of each citation as the reference
         for (const [number, group] of groups.entries()) {
             const lastMatch = lastOccurrences.get(number);
-            
             if (lastMatch) {
-                // Find this match in our group's matches
                 const groupMatch = group.matches.find(m => m.index === lastMatch.index);
                 if (groupMatch) {
                     groupMatch.isReference = true;
                     groupMatch.isReferenceSource = true;
-                    
-                    // Extract reference text (everything after the citation)
-                    const lineContent = groupMatch.lineContent;
-                    const citationPos = lineContent.indexOf(`[${number}]`);
-                    if (citationPos !== -1) {
-                        group.referenceText = lineContent.substring(citationPos + number.length + 2).trim();
-                    }
                 }
             }
         }
@@ -134,7 +155,17 @@ export class CitationService {
      * Convert all citations in the content to use hex IDs
      */
     public convertAllCitations(content: string): ConversionResult {
-        const citationGroups = this.extractCitations(content);
+        // First, remove all existing references and citations
+        const cleanedContent = content
+            // Remove all reference definitions
+            .replace(/\n\[\d+\]:.*$/gm, '')
+            // Remove all citations
+            .replace(/\[\d+\]/g, '')
+            // Clean up any double newlines that might result
+            .replace(/\n{3,}/g, '\n\n');
+            
+        const citationGroups = this.extractCitations(cleanedContent);
+        
         if (citationGroups.length === 0) {
             return {
                 content,
@@ -143,30 +174,38 @@ export class CitationService {
             };
         }
 
-        let updatedContent = content;
+        let updatedContent = cleanedContent;
         let citationsConverted = 0;
+        const hexIdMap = new Map<string, string>();
 
-        // Process each citation group
+        // First pass: replace all citations with hex IDs
         for (const group of citationGroups) {
             const hexId = this.generateHexId();
+            hexIdMap.set(group.number, hexId);
             
-            // Process in reverse order to avoid position shifting
-            const sortedMatches = [...group.matches].sort((a, b) => b.index - a.index);
-            
-            for (const match of sortedMatches) {
+            for (const match of group.matches) {
                 const before = updatedContent.substring(0, match.index);
                 const after = updatedContent.substring(match.index + match.original.length);
-                
-                if (match.isReference && group.referenceText) {
-                    // This is the reference, add colon and reference text
-                    updatedContent = `${before}[^${hexId}]: ${group.referenceText}${after}`;
-                } else {
-                    // Regular citation
-                    updatedContent = `${before}[^${hexId}]${after}`;
-                }
-                
+                // Check if the original match ends with a colon and preserve it
+                const needsColon = match.original.endsWith(':');
+                updatedContent = `${before}[^${hexId}]${needsColon ? ':' : ''}${after}`;
                 citationsConverted++;
             }
+        }
+
+        // Second pass: add references at the end
+        const references: string[] = [];
+        for (const group of citationGroups) {
+            const hexId = hexIdMap.get(group.number);
+            if (hexId && group.referenceText) {
+                // Format the reference with proper spacing after the colon
+                references.push(`[^${hexId}]: ${group.referenceText.trim()}`);
+            }
+        }
+
+        // Add all references at the end of the document
+        if (references.length > 0) {
+            updatedContent = `${updatedContent}\n\n## References\n\n${references.join('\n\n')}`;
         }
 
         return {

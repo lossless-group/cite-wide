@@ -34,8 +34,8 @@ export class CitationModal extends Modal {
         
         contentEl.addClass('cite-wide-modal');
 
-        // Find all citation groups
-        this.citationGroups = citationService.findCitations(this.content);
+        // Extract all citation groups
+        this.citationGroups = citationService.extractCitations(this.content);
 
         if (this.citationGroups.length === 0) {
             contentEl.createEl('p', { 
