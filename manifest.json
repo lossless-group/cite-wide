@@ -1,9 +1,9 @@
 {
 	"id": "cite-wide",
-	"name": "Cite Wide Obsidian Plugin",
+	"name": "Cite Wide",
 	"version": "0.0.0.1",
 	"minAppVersion": "0.0.0.1",
-	"description": "A plugin for Obsidian that allows you to generate content using AI.",
+	"description": "A plugin for Obsidian that enables rigorous citation and reference management.",
 	"author": "Lossless Group",
 	"authorUrl": "https://lossless.group",
 	"fundingUrl": "https://lossless.group",
