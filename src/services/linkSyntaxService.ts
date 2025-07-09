@@ -15,16 +15,19 @@ export function formatLinksInMarkdownSyntax(content: string): string {
     const processedLines = [];
 
     for (const line of lines) {
-        // Only process lines that look like reference definitions: [^id]: Title URL
-        const referenceLine = line.trim().match(/^(\[\^[^\]]+\]:)\s+(.+?)\s+(https?:\/\/[^\s\]]+)/);
+        // Match both formats:
+        // 1. [^id]: [PDF] Title URL
+        // 2. [^id]: Title URL
+        const referenceLine = line.trim().match(/^(\[\^[^\]]+\]:)\s+(?:\[(PDF|DOC|HTML)\]\s+)?(.+?)\s+(https?:\/\/[^\s\]]+)/i);
         
         if (referenceLine) {
-            const [, prefix, title, url] = referenceLine;
-            // Format as markdown link: [Title](URL)
-            const formattedLine = `${prefix} [${title}](${url})`;
+            const [, prefix, format, title, url] = referenceLine;
+            // Format as markdown link: [Title, FORMAT](URL) or [Title](URL) if no format
+            const linkText = format ? `${title}, ${format}` : title;
+            const formattedLine = `${prefix} [${linkText}](${url})`;
             processedLines.push(formattedLine);
         } else {
-            // Keep the line as is if it doesn't match the pattern
+            // Keep the line as is if it doesn't match any pattern
             processedLines.push(line);
         }
     }

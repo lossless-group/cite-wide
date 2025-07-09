@@ -173,3 +173,18 @@
     display: flex;
     justify-content: flex-end;
 }
+
+/* Ribbon Icon Styles */
+.workspace-ribbon .side-dock-ribbon-action.cite-wide-ribbon-icon {
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+
+.workspace-ribbon .side-dock-ribbon-action.cite-wide-ribbon-icon:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.workspace-ribbon .side-dock-ribbon-action.cite-wide-ribbon-icon.is-active {
+    color: var(--interactive-accent);
+}

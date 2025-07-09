@@ -45,7 +45,7 @@ export class CitationService {
             const line = lines[i]?.trim() || '';
             
             // Check for section headers
-            if (line.match(/^##?\s+(References|Footnotes)\s*$/i)) {
+            if (line.match(/^##?\s+(References|Footnotes|Sources)\s*$/i)) {
                 inReferencesSection = true;
                 continue;
             }

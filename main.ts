@@ -14,6 +14,24 @@ export default class CiteWidePlugin extends Plugin {
         this.registerReferenceCleanupCommands();
         this.registerCitationFormattingCommands();
         this.registerLinkFormattingCommands();
+        
+        // Add ribbon icon
+        const ribbonIconEl = this.addRibbonIcon(
+            'quote-glyph', // You can change this to any Lucide icon name
+            'Add Citation', // Tooltip text
+            () => {
+                // Open citation modal when clicked
+                const activeEditor = this.app.workspace.activeEditor?.editor;
+                if (activeEditor) {
+                    new CitationModal(this.app, activeEditor).open();
+                } else {
+                    new Notice('Please open a note to add citations');
+                }
+            }
+        );
+        
+        // Optional: Add a class for custom styling
+        ribbonIconEl.addClass('cite-wide-ribbon-icon');
     }
     
     private async loadStyles() {
