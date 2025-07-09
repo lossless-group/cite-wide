@@ -47,25 +47,26 @@ export class CitationModal extends Modal {
         // Create a container for citation groups
         const container = contentEl.createDiv('cite-wide-container');
         
-        // Add a title
-        container.createEl('h2', { 
+        // Create header with title and convert all button
+        const header = container.createDiv('cite-wide-header');
+        
+        // Add title on the left
+        header.createEl('h2', { 
             text: 'Citations in Document',
             cls: 'cite-wide-title'
         });
+        
+        // Add convert all button on the right
+        const convertAllBtn = header.createEl('button', {
+            text: 'Convert All',
+            cls: 'mod-cta cite-wide-convert-all-btn'
+        });
+        convertAllBtn.addEventListener('click', () => this.convertAllCitations());
 
         // Add each citation group
         for (const group of this.citationGroups) {
             this.renderCitationGroup(container, group);
         }
-
-        // Add convert all button
-        const footer = contentEl.createDiv('cite-wide-footer');
-        const convertAllBtn = footer.createEl('button', {
-            text: 'Convert All to Hex',
-            cls: 'mod-cta'
-        });
-
-        convertAllBtn.addEventListener('click', () => this.convertAllCitations());
     }
 
     private renderCitationGroup(container: HTMLElement, group: CitationGroup) {

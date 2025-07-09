@@ -20,6 +20,26 @@
     box-sizing: border-box;
 }
 
+.cite-wide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+    width: 100%;
+}
+
+.cite-wide-title {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.cite-wide-convert-all-btn {
+    white-space: nowrap;
+}
+
 .cite-wide-group {
     margin-bottom: 1.5rem;
     border: 1px solid var(--background-modifier-border);

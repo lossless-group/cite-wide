@@ -70,12 +70,12 @@ export class CitationService {
         // First, extract all reference texts
         let refMatch;
         while ((refMatch = referencePattern.exec(content)) !== null) {
-            const [_, number, refText] = refMatch;
+            const [_, number] = refMatch; // Removed unused refText
             if (number) {
                 // Preserve the reference text exactly as is, including any colons and whitespace
                 const fullMatch = refMatch[0].trim();
                 const refValue = fullMatch.includes(':') 
-                    ? fullMatch.split(':', 2)[1].trim() 
+                    ? (fullMatch.split(':', 2)[1] || '').trim() // Added null check
                     : fullMatch.replace(/^\s*\[\d+\]\s*/, '').trim();
                 referenceMap.set(number, refValue);
             }
