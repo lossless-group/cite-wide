@@ -36,13 +36,12 @@ export class CitationService {
     private generateHexId(): string {
         let hexId: string;
         do {
-            const num = Math.floor(Math.random() * 0x1000000);
-            hexId = num.toString(16).padStart(6, '0');
+            // Use base 36 (0-9, a-z) for more character variety
+            const num = Math.floor(Math.random() * Math.pow(36, 6));
+            hexId = num.toString(36).padStart(6, '0');
             // Ensure we have at least one letter and one number
-            if (!/[a-f]/.test(hexId) || !/\d/.test(hexId)) {
-                continue;
-            }
-        } while (this.usedHexIds.has(hexId));
+            // Base 36 gives us a-z letters, much more variety than hex a-f
+        } while (this.usedHexIds.has(hexId) || !/[a-z]/.test(hexId) || !/\d/.test(hexId));
         
         this.usedHexIds.add(hexId);
         return hexId;
