@@ -147,6 +147,7 @@
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
     border: 1px solid var(--interactive-accent-hover);
+    margin-left: 10rem;
 }
 
 .cite-wide-convert-btn:hover {
