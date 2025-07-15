@@ -1,7 +1,7 @@
 {
 	"name": "cite-wide",
 	"version": "0.0.0.1",
-	"description": "This is starter code for Obsidian plugins (https://obsidian.md)",
+	"description": "This is an Obsidian plugin that enables rigorous citation and reference management (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

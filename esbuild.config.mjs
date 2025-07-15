@@ -3,7 +3,7 @@ import process from 'node:process';
 import builtins from 'builtin-modules';
 
 const banner = `/*
- * Content Farm Plugin for Obsidian
+ * Cite Wide
  * Generated: ${new Date().toISOString()}
  * Build: ${process.env.NODE_ENV || 'development'}
  */`;

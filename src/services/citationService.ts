@@ -61,28 +61,12 @@ export class CitationService {
 
     public extractCitations(content: string): CitationGroup[] {
         const citationPattern = /\[(\d+)\](?!:)/g; // Only match citations, not references
-        // Updated to match references with or without colons, and capture the entire reference text
-        const referencePattern = /^\s*\[(\d+)\]:?\s*([\s\S]*?)(?=\n\s*\[\d+\]:|\n\s*$|$)/gm;
-        
         const matches: CitationMatch[] = [];
-        const referenceMap = new Map<string, string>();
+        const lines = content.split('\n');
         
-        // First, extract all reference texts
-        let refMatch;
-        while ((refMatch = referencePattern.exec(content)) !== null) {
-            const [_, number] = refMatch; // Removed unused refText
-            if (number) {
-                // Preserve the reference text exactly as is, including any colons and whitespace
-                const fullMatch = refMatch[0].trim();
-                const refValue = fullMatch.includes(':') 
-                    ? (fullMatch.split(':', 2)[1] || '').trim() // Added null check
-                    : fullMatch.replace(/^\s*\[\d+\]\s*/, '').trim();
-                referenceMap.set(number, refValue);
-            }
-        }
+        // We don't need to extract reference text - we'll transform in place
 
         // Then find all citation matches
-        const lines = content.split('\n');
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             
@@ -119,11 +103,9 @@ export class CitationService {
         
         for (const match of matches) {
             if (!groups.has(match.number)) {
-                const referenceText = referenceMap.get(match.number) || '';
                 groups.set(match.number, {
                     number: match.number,
-                    matches: [],
-                    referenceText: referenceText
+                    matches: []
                 });
             }
             groups.get(match.number)?.matches.push(match);
@@ -155,16 +137,11 @@ export class CitationService {
      * Convert all citations in the content to use hex IDs
      */
     public convertAllCitations(content: string): ConversionResult {
-        // First, remove all existing references and citations
-        const cleanedContent = content
-            // Remove all reference definitions
-            .replace(/\n\[\d+\]:.*$/gm, '')
-            // Remove all citations
-            .replace(/\[\d+\]/g, '')
-            // Clean up any double newlines that might result
-            .replace(/\n{3,}/g, '\n\n');
-            
-        const citationGroups = this.extractCitations(cleanedContent);
+        // First, extract citations from the original content to get reference text
+        const citationGroups = this.extractCitations(content);
+        
+        // Start with the original content - we'll transform it in place
+        let updatedContent = content;
         
         if (citationGroups.length === 0) {
             return {
@@ -174,7 +151,6 @@ export class CitationService {
             };
         }
 
-        let updatedContent = cleanedContent;
         let citationsConverted = 0;
         const hexIdMap = new Map<string, string>();
 
@@ -193,19 +169,14 @@ export class CitationService {
             }
         }
 
-        // Second pass: add references at the end
-        const references: string[] = [];
+        // Transform reference lines in place - replace [1] with [^hexid] in reference lines
         for (const group of citationGroups) {
             const hexId = hexIdMap.get(group.number);
-            if (hexId && group.referenceText) {
-                // Format the reference with proper spacing after the colon
-                references.push(`[^${hexId}]: ${group.referenceText.trim()}`);
+            if (hexId) {
+                // Replace reference lines like [1] text or [1]: text with [^hexid]: text
+                const refPattern = new RegExp(`^\\s*\\[${group.number}\\]\\s*:?\\s*`, 'gm');
+                updatedContent = updatedContent.replace(refPattern, `[^${hexId}]: `);
             }
-        }
-
-        // Add all references at the end of the document
-        if (references.length > 0) {
-            updatedContent = `${updatedContent}\n\n## References\n\n${references.join('\n\n')}`;
         }
 
         return {
@@ -245,9 +216,13 @@ export class CitationService {
             const before = updatedContent.substring(0, match.index);
             const after = updatedContent.substring(match.index + match.original.length);
             
-            if (match.isReference && group.referenceText) {
-                // This is the reference, add colon and reference text
-                updatedContent = `${before}[^${hexId}]: ${group.referenceText}${after}`;
+            if (match.isReference) {
+                // This is a reference line - replace [1] with [^hexid]: 
+                // The reference text is already in the content after the bracket
+                const refPattern = new RegExp(`\\[${group.number}\\]\\s*:?\\s*`);
+                const replacement = `[^${hexId}]: `;
+                updatedContent = updatedContent.substring(0, match.index) + 
+                    updatedContent.substring(match.index).replace(refPattern, replacement);
             } else {
                 // Regular citation
                 updatedContent = `${before}[^${hexId}]${after}`;
@@ -265,17 +240,51 @@ export class CitationService {
 
     /**
      * Moves citations that appear before punctuation (like commas or periods) to after the punctuation.
-     * Handles multiple citations before punctuation in a single pass.
-     */
-    /**
-     * Moves citations that appear before punctuation (like commas or periods) to after the punctuation.
+     * Ensures proper spacing between punctuation and citations, and between multiple citations.
+     * Avoids modifying the references/sources/footnotes section.
      */
     public moveCitationsBehindPunctuation(content: string): string {
         const lines = content.split('\n');
+        let inReferencesSection = false;
         
         return lines.map(line => {
-            // Handle citations before punctuation
-            return line.replace(/(\[[^\]]+\])([.,;:!?])/g, '$2$1');
+            // Check if we're entering a references section
+            if (/^#+\s*(References|Sources|Footnotes)\s*$/i.test(line.trim())) {
+                inReferencesSection = true;
+                return line;
+            }
+            
+            // Check if we're in a references section and this line starts with a citation followed by colon
+            if (inReferencesSection && /^\s*\[[^\]]+\]\s*:/.test(line)) {
+                return line; // Don't modify reference definitions
+            }
+            
+            // Reset references section flag if we hit a new section or non-reference content
+            if (inReferencesSection && line.trim() && !/^\s*\[[^\]]+\]\s*:/.test(line) && !/^\*+\s*$/.test(line.trim())) {
+                // Check if this is another header
+                if (/^#+/.test(line.trim())) {
+                    inReferencesSection = false;
+                }
+            }
+            
+            // Skip processing if we're in references section
+            if (inReferencesSection) {
+                return line;
+            }
+            
+            // Process the line to move citations after punctuation
+            let processedLine = line;
+            
+            // Handle multiple citations before punctuation (e.g., [^123][^456], -> , [^123] [^456])
+            // This regex captures one or more citations followed by comma or period
+            processedLine = processedLine.replace(/((?:\[[^\]]+\])+)([.,])/g, (_, citations, punctuation) => {
+                // Split multiple citations and ensure proper spacing
+                const citationMatches = citations.match(/\[[^\]]+\]/g) || [];
+                const spacedCitations = citationMatches.join(' ');
+                return `${punctuation} ${spacedCitations}`;
+            });
+            
+            return processedLine;
         }).join('\n');
     }
 
