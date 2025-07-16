@@ -158,7 +158,6 @@ export class CitationService {
             if (refMatch && refMatch[1]) {
                 console.log('Debug: Found numeric reference definition:', refMatch[0]);
                 const number = refMatch[1];
-                const referenceText = refMatch[2] || '';
                 
                 // Find the corresponding citation group
                 const group = groups.get(number);
@@ -185,7 +184,6 @@ export class CitationService {
                 console.log('Debug: Found hex reference definition:', refMatch[0], 'with hex ID:', refMatch[1]);
                 const hexId = refMatch[1];
                 const number = `hex_${hexId}`; // Use the same prefix as in citation detection
-                const referenceText = refMatch[2] || '';
                 
                 // Find the corresponding citation group
                 const group = groups.get(number);

@@ -198,7 +198,7 @@ export class CitationModal extends Modal {
         }
     }
 
-    private async convertCitationInstance(group: CitationGroup, matchIndex: number) {
+    private async convertCitationInstance(group: CitationGroup, _matchIndex: number) {
         try {
             // Use the same approach as convertCitationGroup to ensure footnote conversion
             const result = citationService.convertCitation(
