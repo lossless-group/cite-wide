@@ -28,6 +28,11 @@ An Obsidian plugin for rigorous, vault-wide citation management. Converts numeri
 - Ensures proper spacing between multiple citations
 - Maintains clean, readable document structure
 
+### 📊 **Dataview Integration**
+- Automatically creates citation files in a dedicated folder for Dataview queries
+- Rich metadata including title, author, URL, usage count, and file tracking
+- Comprehensive frontmatter for powerful Dataview queries and organization
+
 ### Convert to Hex Modal
 
 ![Convert to Hex Modal](https://i.imgur.com/dBMKnV7.gif)
@@ -61,6 +66,14 @@ ln -s /Users/mpstaton/code/lossless-monorepo/cite-wide /Users/mpstaton/content-m
 
 ## Configuration
 
+### Citations Folder Setup
+
+The plugin automatically creates citation files for Dataview integration:
+
+1. Open Obsidian Settings → Community Plugins → Cite Wide
+2. Set your preferred citations folder (default: "Citations")
+3. Citation files will be created automatically when you use citation commands
+
 ### Jina.ai API Key Setup (Optional)
 
 The URL citation extraction feature works without an API key, but adding one can help avoid rate limits:
@@ -86,6 +99,55 @@ The URL citation extraction feature works without an API key, but adding one can
 **For existing footnotes:**
 - **Before:** `[^028ee3]: @https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/`
 - **After:** `[^028ee3]: 2016, May. "[Originals, by Adam Grant | Bob's Books](https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/)" schoultz. [Bob's Books](https://bobsbeenreading.com/).`
+
+## Dataview Integration
+
+The plugin automatically creates citation files with rich metadata for powerful Dataview queries. Each citation file includes:
+
+### Citation File Structure
+```yaml
+---
+hexId: "a1b2c3"
+title: "Article Title"
+author: "Author Name"
+url: "https://example.com/article"
+date: "2024"
+source: "example.com"
+tags: []
+created: "2024-01-15T10:30:00.000Z"
+lastModified: "2024-01-15T10:30:00.000Z"
+referenceText: "Full reference text"
+usageCount: 1
+filesUsedIn: ["path/to/file.md"]
+---
+```
+
+### Example Dataview Queries
+
+**Basic citation table:**
+```dataview
+TABLE title, author, date, usageCount
+FROM "Citations"
+SORT created DESC
+```
+
+**Most used citations:**
+```dataview
+TABLE title, author, source, filesUsedIn
+FROM "Citations"
+WHERE usageCount > 1
+SORT usageCount DESC
+```
+
+**Citations by author:**
+```dataview
+TABLE title, date, usageCount, url
+FROM "Citations"
+WHERE author
+SORT author ASC, date DESC
+```
+
+See `examples/dataview-citations-examples.md` for comprehensive Dataview query examples.
 
 
 

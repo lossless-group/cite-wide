@@ -66,7 +66,6 @@ export class CitationService {
         const matches: CitationMatch[] = [];
         const lines = content.split('\n');
         
-        console.log('Debug: Processing', lines.length, 'lines');
         
         // Find all citation matches (both numeric and hex)
         for (let i = 0; i < lines.length; i++) {
@@ -74,11 +73,9 @@ export class CitationService {
             
             if (!line) continue;
             
-            console.log('Debug: Processing line', i + 1, ':', line.trim());
             
             // Skip lines that are reference definitions
             if (/^\s*\[\d+\]:/.test(line) || /^\s*\[\^[a-f0-9]+\]:/.test(line)) {
-                console.log('Debug: Skipping reference definition line:', line.trim());
                 continue;
             }
             
@@ -145,13 +142,11 @@ export class CitationService {
         // Find actual reference definitions (lines that start with [number]: or [^hex]:)
         const referenceDefinitions = new Map<string, CitationMatch>();
         
-        console.log('Debug: Looking for reference definitions');
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (!line) continue;
             
-            console.log('Debug: Checking line', i + 1, 'for reference definition:', line.trim());
             
             // Check for numeric reference definitions [1]: text
             let refMatch = line.match(/^\s*\[(\d+)\]\s*:?\s*(.*)/);
@@ -181,14 +176,13 @@ export class CitationService {
             // Check for hex reference definitions [^hex]: text
             refMatch = line.match(/^\s*\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
             if (refMatch && refMatch[1]) {
-                console.log('Debug: Found hex reference definition:', refMatch[0], 'with hex ID:', refMatch[1]);
+
                 const hexId = refMatch[1];
                 const number = `hex_${hexId}`; // Use the same prefix as in citation detection
                 
                 // Find the corresponding citation group
                 const group = groups.get(number);
                 if (group && refMatch[0]) {
-                    console.log('Debug: Found corresponding citation group for hex reference:', number);
                     // Create a reference match
                     const refCitationMatch: CitationMatch = {
                         number,

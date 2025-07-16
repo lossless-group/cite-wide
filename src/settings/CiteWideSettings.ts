@@ -2,13 +2,16 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import CiteWidePlugin from '../../main';
 import { urlCitationService } from '../services/urlCitationService';
+import { citationFileService } from '../services/citationFileService';
 
 export interface CiteWideSettings {
     jinaApiKey: string;
+    citationsFolder: string;
 }
 
 export const DEFAULT_SETTINGS: CiteWideSettings = {
-    jinaApiKey: ''
+    jinaApiKey: '',
+    citationsFolder: 'Citations'
 };
 
 export class CiteWideSettingTab extends PluginSettingTab {
@@ -35,6 +38,19 @@ export class CiteWideSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.jinaApiKey = value;
                     urlCitationService.setApiKey(value);
+                    await this.plugin.saveSettings();
+                }));
+
+        // Citations folder setting
+        new Setting(containerEl)
+            .setName('Citations Folder')
+            .setDesc('Folder where citation files will be stored for Dataview integration.')
+            .addText(text => text
+                .setPlaceholder('Citations')
+                .setValue(this.plugin.settings.citationsFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.citationsFolder = value;
+                    citationFileService.setCitationsFolder(value);
                     await this.plugin.saveSettings();
                 }));
 

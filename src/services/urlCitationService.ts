@@ -13,6 +13,7 @@ export interface UrlCitationResult {
     citation?: string;
     hexId?: string;
     error?: string;
+    citationData?: CitationData;
 }
 
 export class UrlCitationService {
@@ -26,7 +27,7 @@ export class UrlCitationService {
     /**
      * Extract citation information from a URL using Jina.ai Reader API
      */
-    public async extractCitationFromUrl(url: string): Promise<UrlCitationResult> {
+    public async extractCitationFromUrl(url: string, existingHexId?: string): Promise<UrlCitationResult> {
         try {
             // Validate URL
             if (!this.isValidUrl(url)) {
@@ -46,8 +47,8 @@ export class UrlCitationService {
                 };
             }
 
-            // Generate hex ID for the citation
-            const hexId = this.generateHexId();
+            // Use existing hex ID or generate new one
+            const hexId = existingHexId || this.generateHexId();
             
             // Format the citation
             const citation = this.formatCitation(citationData, hexId);
@@ -55,7 +56,8 @@ export class UrlCitationService {
             return {
                 success: true,
                 citation,
-                hexId
+                hexId,
+                citationData
             };
 
         } catch (error) {
