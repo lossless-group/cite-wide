@@ -1,3 +1,6 @@
+
+![Cite Wide Obsidian Plugin Banner Image](https://i.imgur.com/FjH00G6.png)
+***
 # Cite Wide Obsidian Plugin
 
 An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into unique hex-codes, logs unique hex codes and their reference information into a base, assures consistent hex codes per reference.
@@ -33,18 +36,21 @@ An Obsidian plugin for rigorous, vault-wide citation management. Converts numeri
 - Rich metadata including title, author, URL, usage count, and file tracking
 - Comprehensive frontmatter for powerful Dataview queries and organization
 
-### Convert to Hex Modal
+### Command: Convert to Hex Modal
 
-![Convert to Hex Modal](https://i.imgur.com/dBMKnV7.gif)
+![Command: Convert to Hex](https://i.imgur.com/dBMKnV7.gif)
 
-### Clean Reference Section Command
+### Command: Clean Reference Section
 
 ![Command: Clean Reference Section](https://i.imgur.com/usdcU1p.gif)
 
-### Move Citations after Punctuation Command
+### Command: Move Citations after Punctuation
 
-![Move Citations after Punctuation Command](https://i.imgur.com/xbzDnPT.gif)
+![Command: Move Citations after Punctuation](https://i.imgur.com/xbzDnPT.gif)
 
+### Command: Extract Citation from URL
+
+![Command: Extract Citation from URL](https://i.imgur.com/J6JZLNK.png)
 
 # Getting Started
 
