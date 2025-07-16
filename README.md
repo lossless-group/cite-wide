@@ -1,6 +1,5 @@
+![Cite Wide Obsidian Plugin Banner](https://i.imgur.com/CJ18gyp.png)
 
-![Cite Wide Obsidian Plugin Banner Image](https://i.imgur.com/FjH00G6.png)
-***
 # Cite Wide Obsidian Plugin
 
 An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into unique hex-codes, logs unique hex codes and their reference information into a base, assures consistent hex codes per reference.
