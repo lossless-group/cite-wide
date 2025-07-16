@@ -3,16 +3,30 @@ import { citationService } from './src/services/citationService';
 import { CitationModal } from './src/modals/CitationModal';
 import { cleanReferencesSectionService } from './src/services/cleanReferencesSectionService';
 import { formatLinksInSelection } from './src/services/linkSyntaxService';
+import { urlCitationService } from './src/services/urlCitationService';
+import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
 
 export default class CiteWidePlugin extends Plugin {
+    settings!: CiteWideSettings;
+
     async onload(): Promise<void> {
+        // Load settings
+        await this.loadSettings();
+        
+        // Configure URL citation service with API key
+        urlCitationService.setApiKey(this.settings.jinaApiKey);
+        
         // Load CSS
-        this.loadStyles();
+        // this.loadStyles();
         
         // Register commands
         this.registerCitationCommands();
         this.registerReferenceCleanupCommands();
         this.registerCitationFormattingCommands();
+        this.registerUrlCitationCommands();
+        
+        // Add settings tab
+        this.addSettingTab(new CiteWideSettingTab(this.app, this));
         this.registerLinkFormattingCommands();
         
         // Add ribbon icon
@@ -33,22 +47,30 @@ export default class CiteWidePlugin extends Plugin {
         // Optional: Add a class for custom styling
         ribbonIconEl.addClass('cite-wide-ribbon-icon');
     }
-    
-    private async loadStyles() {
-        try {
-            const cssPath = this.manifest.dir + '/styles.css';
-            const response = await fetch(cssPath);
-            if (!response.ok) throw new Error('Failed to load CSS');
-            
-            const css = await response.text();
-            const styleEl = document.createElement('style');
-            styleEl.id = 'cite-wide-styles';
-            styleEl.textContent = css;
-            document.head.appendChild(styleEl);
-        } catch (error) {
-            console.error('Error loading styles:', error);
-        }
+
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
+    }
+    
+    // private async loadStyles() {
+    //     try {
+    //         const cssPath = this.manifest.dir + '/styles.css';
+    //         const response = await fetch(cssPath);
+    //         if (!response.ok) throw new Error('Failed to load CSS');
+            
+    //         const css = await response.text();
+    //         const styleEl = document.createElement('style');
+    //         styleEl.id = 'cite-wide-styles';
+    //         styleEl.textContent = css;
+    //         document.head.appendChild(styleEl);
+    //     } catch (error) {
+    //         console.error('Error loading styles:', error);
+    //     }
+    // }
 
     private registerCitationCommands(): void {
         // Command to show citations in current file
@@ -171,6 +193,124 @@ export default class CiteWidePlugin extends Plugin {
                 }
             }
         });
+    }
+
+    private registerUrlCitationCommands(): void {
+        // Command to extract citation from highlighted URL
+        this.addCommand({
+            id: 'extract-citation-from-url',
+            name: 'Extract Citation from URL',
+            editorCallback: async (editor: Editor) => {
+                try {
+                    const selection = editor.getSelection();
+                    
+                    if (!selection) {
+                        new Notice('Please select a URL first');
+                        return;
+                    }
+
+                    // Check if the selection looks like a URL
+                    const urlRegex = /https?:\/\/[^\s]+/;
+                    const urlMatch = selection.match(urlRegex);
+                    
+                    if (!urlMatch) {
+                        new Notice('Selected text does not appear to be a valid URL');
+                        return;
+                    }
+
+                    const url = urlMatch[0];
+                    
+                    // Show loading notice
+                    new Notice('Extracting citation from URL...');
+                    
+                    // Show rate limit notice if no API key is configured
+                    if (!urlCitationService.hasApiKey()) {
+                        new Notice('Tip: Adding a Jina.ai API key in settings can avoid rate limits');
+                    }
+                    
+                    // Extract citation using Jina.ai
+                    const result = await urlCitationService.extractCitationFromUrl(url);
+                    
+                    if (!result.success) {
+                        new Notice(`Error: ${result.error}`);
+                        return;
+                    }
+
+                    if (!result.citation || !result.hexId) {
+                        new Notice('Failed to extract citation data');
+                        return;
+                    }
+
+                    // Check if this URL is already in a footnote
+                    const content = editor.getValue();
+                    const footnoteRegex = /\[\^([a-f0-9]+)\]:\s*@?https?:\/\/[^\s]+/g;
+                    let match;
+                    let foundFootnote = false;
+                    
+                    while ((match = footnoteRegex.exec(content)) !== null) {
+                        const footnoteUrl = match[0].match(/https?:\/\/[^\s]+/)?.[0];
+                        if (footnoteUrl === url) {
+                            // Found existing footnote with this URL, update it
+                            const hexId = match[1];
+                            const newFootnote = `[^${hexId}]: ${result.citation.replace(/^\[\^[a-f0-9]+\]:\s*/, '')}`;
+                            
+                            const updatedContent = content.replace(match[0], newFootnote);
+                            editor.setValue(updatedContent);
+                            
+                            new Notice(`Updated existing footnote: ${hexId}`);
+                            foundFootnote = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!foundFootnote) {
+                        // No existing footnote found, create new one
+                        const citationReference = `[^${result.hexId}]`;
+                        editor.replaceSelection(citationReference);
+                        
+                        // Add the citation definition to the footnotes section
+                        const footnoteSection = this.ensureFootnoteSection(content);
+                        
+                        // Add the citation definition
+                        const updatedContent = content.replace(
+                            footnoteSection.marker,
+                            `${footnoteSection.marker}\n${result.citation}`
+                        );
+                        
+                        editor.setValue(updatedContent);
+                        
+                        new Notice(`Citation extracted successfully: ${result.hexId}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error extracting citation from URL:', error);
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    new Notice(`Error extracting citation: ${errorMsg}`);
+                }
+            }
+        });
+    }
+
+    /**
+     * Ensure the document has a footnotes section
+     */
+    private ensureFootnoteSection(content: string): { content: string; marker: string } {
+        const footnoteMarker = '\n\n# Footnotes\n';
+        
+        if (content.includes(footnoteMarker)) {
+            return { content, marker: footnoteMarker };
+        }
+
+        const altMarker = '\n## Footnotes\n';
+        if (content.includes(altMarker)) {
+            return { content, marker: altMarker };
+        }
+
+        // Add a new footnotes section at the end
+        return { 
+            content: content + footnoteMarker, 
+            marker: footnoteMarker 
+        };
     }
 
     private registerLinkFormattingCommands(): void {

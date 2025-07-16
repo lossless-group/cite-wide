@@ -86,6 +86,14 @@
   border: 1px solid var(--background-modifier-border);
   border-left: 3px solid var(--interactive-accent);
 }
+.cite-wide-instance.cite-wide-reference-source {
+  background-color: var(--background-secondary-alt);
+  margin: 0 -1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--interactive-accent);
+}
 .cite-wide-instance:last-child {
   border-bottom: none;
 }
@@ -104,6 +112,24 @@
 .cite-wide-line-preview {
   opacity: 0.9;
 }
+.cite-wide-badge {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cite-wide-badge-reference {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-border);
+}
+.cite-wide-line-info > .cite-wide-badge + span {
 .cite-wide-badge {
   display: inline-block;
   padding: 0.15em 0.5em;
@@ -142,11 +168,39 @@
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
   border: 1px solid var(--interactive-accent-hover);
+  margin-left: 10rem;
+}
+.cite-wide-convert-btn:hover {
+  background-color: var(--interactive-accent-hover);
+}
+.cite-wide-instance-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 0.75rem;
+}
+.cite-wide-convert-btn,
+.cite-wide-view-btn {
+  white-space: nowrap;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85em;
+  line-height: 1.4;
+  border-radius: 4px;
+  transition: all 0.1s ease;
+}
+.cite-wide-convert-btn {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: 1px solid var(--interactive-accent-hover);
 }
 .cite-wide-convert-btn:hover {
   background-color: var(--interactive-accent-hover);
 }
 .cite-wide-view-btn {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+}
+.cite-wide-view-btn:hover {
+  background-color: var(--background-modifier-hover);
   background-color: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
 }
