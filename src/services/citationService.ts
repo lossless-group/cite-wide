@@ -59,23 +59,32 @@ export class CitationService {
     }
 
     public extractCitations(content: string): CitationGroup[] {
-        const citationPattern = /\[(\d+)\](?!:)/g; // Only match citations, not references
+        console.log('Debug: Starting extractCitations');
+        // Match both numeric citations [1] and hex citations [^1]
+        const numericCitationPattern = /\[(\d+)\](?!:)/g;
+        const hexCitationPattern = /\[\^([a-f0-9]+)\](?!:)/g;
         const matches: CitationMatch[] = [];
         const lines = content.split('\n');
         
-        // We don't need to extract reference text - we'll transform in place
-
-        // Then find all citation matches
+        console.log('Debug: Processing', lines.length, 'lines');
+        
+        // Find all citation matches (both numeric and hex)
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             
             if (!line) continue;
             
-            // Skip lines that are reference definitions
-            if (/^\s*\[\d+\]:/.test(line)) continue;
+            console.log('Debug: Processing line', i + 1, ':', line.trim());
             
+            // Skip lines that are reference definitions
+            if (/^\s*\[\d+\]:/.test(line) || /^\s*\[\^[a-f0-9]+\]:/.test(line)) {
+                console.log('Debug: Skipping reference definition line:', line.trim());
+                continue;
+            }
+            
+            // Find numeric citations
             let match;
-            while ((match = citationPattern.exec(line)) !== null) {
+            while ((match = numericCitationPattern.exec(line)) !== null) {
                 if (match[1]) {
                     if (match[0] && match[1]) {
                         const lineIndex = content.indexOf(line);
@@ -85,6 +94,29 @@ export class CitationService {
                         if (index >= 0) {
                             matches.push({
                                 number: match[1],
+                                original: match[0],
+                                index,
+                                lineContent: line,
+                                lineNumber: i + 1,
+                                isReference: false
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Find hex citations
+            while ((match = hexCitationPattern.exec(line)) !== null) {
+                if (match[1]) {
+                    if (match[0] && match[1]) {
+                        const lineIndex = content.indexOf(line);
+                        const matchIndex = lineIndex >= 0 ? lineIndex + (match.index || 0) : 0;
+                        const index = content.indexOf(match[0], matchIndex);
+                        
+                        if (index >= 0) {
+                            console.log('Debug: Found hex citation:', match[0], 'with number:', match[1]);
+                            matches.push({
+                                number: `hex_${match[1]}`, // Prefix to distinguish from numeric
                                 original: match[0],
                                 index,
                                 lineContent: line,
@@ -110,25 +142,85 @@ export class CitationService {
             groups.get(match.number)?.matches.push(match);
         }
 
-        // Mark the last occurrence of each citation as the reference
-        const allMatches = Array.from(matches).sort((a, b) => a.index - b.index);
-        const lastOccurrences = new Map<string, CitationMatch>();
+        // Find actual reference definitions (lines that start with [number]: or [^hex]:)
+        const referenceDefinitions = new Map<string, CitationMatch>();
         
-        for (const match of allMatches) {
-            lastOccurrences.set(match.number, match);
-        }
+        console.log('Debug: Looking for reference definitions');
         
-        for (const [number, group] of groups.entries()) {
-            const lastMatch = lastOccurrences.get(number);
-            if (lastMatch) {
-                const groupMatch = group.matches.find(m => m.index === lastMatch.index);
-                if (groupMatch) {
-                    groupMatch.isReference = true;
-                    groupMatch.isReferenceSource = true;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+            
+            console.log('Debug: Checking line', i + 1, 'for reference definition:', line.trim());
+            
+            // Check for numeric reference definitions [1]: text
+            let refMatch = line.match(/^\s*\[(\d+)\]\s*:?\s*(.*)/);
+            if (refMatch && refMatch[1]) {
+                console.log('Debug: Found numeric reference definition:', refMatch[0]);
+                const number = refMatch[1];
+                const referenceText = refMatch[2] || '';
+                
+                // Find the corresponding citation group
+                const group = groups.get(number);
+                if (group && refMatch[0]) {
+                    // Create a reference match
+                    const refCitationMatch: CitationMatch = {
+                        number,
+                        original: refMatch[0],
+                        index: content.indexOf(line) + line.indexOf(refMatch[0]),
+                        lineContent: line,
+                        lineNumber: i + 1,
+                        isReference: true,
+                        isReferenceSource: true
+                    };
+                    
+                    referenceDefinitions.set(number, refCitationMatch);
+                    group.matches.push(refCitationMatch);
+                }
+            }
+            
+            // Check for hex reference definitions [^hex]: text
+            refMatch = line.match(/^\s*\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+            if (refMatch && refMatch[1]) {
+                console.log('Debug: Found hex reference definition:', refMatch[0], 'with hex ID:', refMatch[1]);
+                const hexId = refMatch[1];
+                const number = `hex_${hexId}`; // Use the same prefix as in citation detection
+                const referenceText = refMatch[2] || '';
+                
+                // Find the corresponding citation group
+                const group = groups.get(number);
+                if (group && refMatch[0]) {
+                    console.log('Debug: Found corresponding citation group for hex reference:', number);
+                    // Create a reference match
+                    const refCitationMatch: CitationMatch = {
+                        number,
+                        original: refMatch[0],
+                        index: content.indexOf(line) + line.indexOf(refMatch[0]),
+                        lineContent: line,
+                        lineNumber: i + 1,
+                        isReference: true,
+                        isReferenceSource: true
+                    };
+                    
+                    referenceDefinitions.set(number, refCitationMatch);
+                    group.matches.push(refCitationMatch);
+                } else {
+                    console.log('Debug: No corresponding citation group found for hex reference:', number);
+                }
+            } else {
+                // Debug: Check if the line looks like a hex reference but didn't match
+                if (line.trim().match(/^\[\^[a-f0-9]+\]/)) {
+                    console.log('Debug: Line looks like hex reference but didn\'t match:', line);
                 }
             }
         }
 
+        console.log('Debug: Final citation groups:', Array.from(groups.values()).map(g => ({
+            number: g.number,
+            matchCount: g.matches.length,
+            references: g.matches.filter(m => m.isReference).length
+        })));
+        
         return Array.from(groups.values());
     }
 
@@ -153,28 +245,56 @@ export class CitationService {
         let citationsConverted = 0;
         const hexIdMap = new Map<string, string>();
 
-        // First pass: replace all citations with hex IDs
+        // First pass: replace all citations with hex IDs (but not reference definitions)
         for (const group of citationGroups) {
             const hexId = this.generateHexId();
             hexIdMap.set(group.number, hexId);
             
             for (const match of group.matches) {
+                // Skip reference definitions - we'll handle them separately
+                if (match.isReference) {
+                    continue;
+                }
+                
                 const before = updatedContent.substring(0, match.index);
                 const after = updatedContent.substring(match.index + match.original.length);
-                // Check if the original match ends with a colon and preserve it
-                const needsColon = match.original.endsWith(':');
-                updatedContent = `${before}[^${hexId}]${needsColon ? ':' : ''}${after}`;
+                updatedContent = `${before}[^${hexId}]${after}`;
                 citationsConverted++;
             }
         }
 
-        // Transform reference lines in place - replace [1] with [^hexid] in reference lines
+        // Second pass: transform reference definitions - replace [1]: or [^oldhex]: with [^newhexid]: 
         for (const group of citationGroups) {
             const hexId = hexIdMap.get(group.number);
             if (hexId) {
-                // Replace reference lines like [1] text or [1]: text with [^hexid]: text
-                const refPattern = new RegExp(`^\\s*\\[${group.number}\\]\\s*:?\\s*`, 'gm');
-                updatedContent = updatedContent.replace(refPattern, `[^${hexId}]: `);
+                if (group.number.startsWith('hex_')) {
+                    // This is a hex citation - replace [^oldhex]: with [^newhexid]: 
+                    const oldHexId = group.number.replace('hex_', '');
+                    // Use a more careful approach to preserve spacing
+                    const lines = updatedContent.split('\n');
+                    const updatedLines = lines.map(line => {
+                        const refMatch = line.match(/^(\s*)\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+                        if (refMatch && refMatch[2] === oldHexId) {
+                            const [, leadingSpaces, , restOfLine] = refMatch;
+                            return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
+                        }
+                        return line;
+                    });
+                    updatedContent = updatedLines.join('\n');
+                } else {
+                    // This is a numeric citation - replace [1]: with [^hexid]: 
+                    // Use a more careful approach to preserve spacing
+                    const lines = updatedContent.split('\n');
+                    const updatedLines = lines.map(line => {
+                        const refMatch = line.match(/^(\s*)\[(\d+)\]\s*:?\s*(.*)/);
+                        if (refMatch && refMatch[2] === group.number) {
+                            const [, leadingSpaces, , restOfLine] = refMatch;
+                            return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
+                        }
+                        return line;
+                    });
+                    updatedContent = updatedLines.join('\n');
+                }
             }
         }
 
@@ -216,12 +336,33 @@ export class CitationService {
             const after = updatedContent.substring(match.index + match.original.length);
             
             if (match.isReference) {
-                // This is a reference line - replace [1] with [^hexid]: 
-                // The reference text is already in the content after the bracket
-                const refPattern = new RegExp(`\\[${group.number}\\]\\s*:?\\s*`);
-                const replacement = `[^${hexId}]: `;
-                updatedContent = updatedContent.substring(0, match.index) + 
-                    updatedContent.substring(match.index).replace(refPattern, replacement);
+                // This is a reference line - use the same careful approach as convertAllCitations
+                if (group.number.startsWith('hex_')) {
+                    // This is a hex citation - replace [^oldhex]: with [^newhexid]: 
+                    const oldHexId = group.number.replace('hex_', '');
+                    const lines = updatedContent.split('\n');
+                    const updatedLines = lines.map(line => {
+                        const refMatch = line.match(/^(\s*)\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+                        if (refMatch && refMatch[2] === oldHexId) {
+                            const [, leadingSpaces, , restOfLine] = refMatch;
+                            return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
+                        }
+                        return line;
+                    });
+                    updatedContent = updatedLines.join('\n');
+                } else {
+                    // This is a numeric citation - replace [1]: with [^hexid]: 
+                    const lines = updatedContent.split('\n');
+                    const updatedLines = lines.map(line => {
+                        const refMatch = line.match(/^(\s*)\[(\d+)\]\s*:?\s*(.*)/);
+                        if (refMatch && refMatch[2] === group.number) {
+                            const [, leadingSpaces, , restOfLine] = refMatch;
+                            return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
+                        }
+                        return line;
+                    });
+                    updatedContent = updatedLines.join('\n');
+                }
             } else {
                 // Regular citation
                 updatedContent = `${before}[^${hexId}]${after}`;

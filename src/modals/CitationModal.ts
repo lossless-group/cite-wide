@@ -75,8 +75,13 @@ export class CitationModal extends Modal {
         
         // Create a collapsible header
         const headerContent = header.createDiv('cite-wide-group-header-content');
+        // Display the original citation format instead of the internal group number
+        const displayNumber = group.number.startsWith('hex_') 
+            ? `^${group.number.replace('hex_', '')}` 
+            : group.number;
+            
         headerContent.createEl('h3', { 
-            text: `Citation [${group.number}] (${group.matches.length} instances)`,
+            text: `Citation [${displayNumber}] (${group.matches.length} instances)`,
             cls: 'cite-wide-group-title'
         });
 
@@ -195,42 +200,24 @@ export class CitationModal extends Modal {
 
     private async convertCitationInstance(group: CitationGroup, matchIndex: number) {
         try {
-            const match = group.matches[matchIndex];
-            if (!match) return;
-
-            // Get current cursor position
-            const cursor = this.editor.getCursor();
-            
-            // Convert just this specific instance
-            // For single instance conversion, we'll process the content directly
-            // since our new implementation doesn't support direct match indexing
-            const hexId = citationService.getNewHexId();
-            const before = this.content.substring(0, match.index);
-            const after = this.content.substring(match.index + match.original.length);
-            const updatedContent = `${before}[^${hexId}]${after}`;
-            
-            const result = {
-                content: updatedContent,
-                changed: true,
-                stats: { citationsConverted: 1 }
-            };
+            // Use the same approach as convertCitationGroup to ensure footnote conversion
+            const result = citationService.convertCitation(
+                this.content,
+                group.number
+            );
 
             if (result.changed) {
-                // Update the content
                 await this.saveChanges(result.content);
                 
-                // Calculate new cursor position
-                const offsetChange = result.content.length - this.content.length;
-                const newCursor = {
-                    line: cursor.line,
-                    ch: cursor.ch + (match.index <= cursor.ch ? offsetChange : 0)
-                };
-                
-                // Update content and restore cursor
+                // Update the content for future operations
                 this.content = result.content;
-                this.editor.setCursor(newCursor);
                 
-                new Notice(`Converted citation [${group.number}] to hex format`);
+                // Display the original citation format in the notice
+                const displayNumber = group.number.startsWith('hex_') 
+                    ? `^${group.number.replace('hex_', '')}` 
+                    : group.number;
+                    
+                new Notice(`Converted citation [${displayNumber}] to hex format`);
                 this.close();
             } else {
                 new Notice('No changes were made to the document');

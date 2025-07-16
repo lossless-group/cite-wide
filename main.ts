@@ -89,23 +89,13 @@ export default class CiteWidePlugin extends Plugin {
             editorCallback: async (editor: Editor) => {
                 try {
                     const content = editor.getValue();
-                    // Get all citation groups
-                    const groups = citationService.findCitations(content);
-                    let totalConverted = 0;
-                    let updatedContent = content;
                     
-                    // Convert each citation group
-                    for (const group of groups) {
-                        const result = citationService.convertCitation(updatedContent, group.number);
-                        if (result.changed) {
-                            updatedContent = result.content;
-                            totalConverted += result.stats.citationsConverted;
-                        }
-                    }
+                    // Use the convertAllCitations method which handles all citations at once
+                    const result = citationService.convertAllCitations(content);
                     
-                    if (totalConverted > 0) {
-                        editor.setValue(updatedContent);
-                        new Notice(`Updated ${totalConverted} citations`);
+                    if (result.changed) {
+                        editor.setValue(result.content);
+                        new Notice(`Updated ${result.stats.citationsConverted} citations`);
                     } else {
                         new Notice('No citations needed conversion');
                     }
