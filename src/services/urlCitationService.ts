@@ -1,5 +1,4 @@
 // cite-wide/src/services/urlCitationService.ts
-import { Notice } from 'obsidian';
 
 export interface CitationData {
     title: string;
@@ -251,7 +250,15 @@ export class UrlCitationService {
             const domain = hostname.replace(/^www\./, '');
             
             // Convert domain to title case
-            return domain.split('.')[0]
+            const domainParts = domain.split('.');
+            if (domainParts.length === 0) {
+                return 'Unknown Site';
+            }
+            const firstPart = domainParts[0];
+            if (!firstPart) {
+                return 'Unknown Site';
+            }
+            return firstPart
                 .split('-')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');

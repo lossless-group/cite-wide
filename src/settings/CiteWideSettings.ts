@@ -39,7 +39,7 @@ export class CiteWideSettingTab extends PluginSettingTab {
                 }));
 
         // Status message
-        const statusEl = containerEl.createEl('div', { 
+        containerEl.createEl('div', { 
             cls: 'setting-item-description',
             text: this.plugin.settings.jinaApiKey 
                 ? '✅ API key configured - URL citation extraction with rate limit protection'
