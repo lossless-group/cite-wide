@@ -317,6 +317,59 @@ export class CitationFileService {
     }
 
     /**
+     * Escape a string value for YAML frontmatter
+     */
+    private escapeYamlValue(value: string): string {
+        // Check if the value needs to be quoted
+        const needsQuoting = 
+            value.includes(':') || 
+            value.includes('"') || 
+            value.includes("'") || 
+            value.includes('[') || 
+            value.includes(']') || 
+            value.includes('{') || 
+            value.includes('}') || 
+            value.includes(',') || 
+            value.includes('&') || 
+            value.includes('*') || 
+            value.includes('#') || 
+            value.includes('?') || 
+            value.includes('|') || 
+            value.includes('-') || 
+            value.includes('>') || 
+            value.includes('!') || 
+            value.includes('%') || 
+            value.includes('@') || 
+            value.includes('`') ||
+            value.startsWith(' ') ||
+            value.endsWith(' ') ||
+            value.includes('\n') ||
+            value.includes('\r') ||
+            value.includes('\t') ||
+            value === 'true' ||
+            value === 'false' ||
+            value === 'yes' ||
+            value === 'no' ||
+            value === 'on' ||
+            value === 'off' ||
+            value === 'null' ||
+            value === '~' ||
+            /^[0-9]+$/.test(value) || // Numbers
+            /^[0-9]+\.[0-9]+$/.test(value) || // Decimals
+            /^[+-]?[0-9]+\.[0-9]+$/.test(value); // Signed decimals
+
+        if (needsQuoting) {
+            // Escape double quotes and backslashes, then wrap in double quotes
+            const escaped = value
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"');
+            return `"${escaped}"`;
+        }
+        
+        return value;
+    }
+
+    /**
      * Create frontmatter string
      */
     private createFrontmatterString(metadata: CitationMetadata): string {
@@ -328,14 +381,14 @@ export class CitationFileService {
                 if (Array.isArray(value)) {
                     if (value.length > 0) {
                         lines.push(`${key}:`);
-                        value.forEach(item => lines.push(`  - ${item}`));
+                        value.forEach(item => lines.push(`  - ${this.escapeYamlValue(item)}`));
                     }
                 } else {
                     // Ensure hexId is always written as a string to prevent YAML from interpreting it as a number
                     if (key === 'hexId') {
                         lines.push(`${key}: "${value}"`);
                     } else {
-                        lines.push(`${key}: ${value}`);
+                        lines.push(`${key}: ${this.escapeYamlValue(String(value))}`);
                     }
                 }
             }
@@ -362,7 +415,8 @@ export class CitationFileService {
             if (trimmed.startsWith('- ')) {
                 // Array item
                 if (currentKey && currentArray) {
-                    currentArray.push(trimmed.substring(2));
+                    const itemValue = trimmed.substring(2);
+                    currentArray.push(this.unescapeYamlValue(itemValue));
                 }
             } else if (trimmed.includes(':')) {
                 // Save previous array if exists
@@ -375,15 +429,8 @@ export class CitationFileService {
                 const [key, ...valueParts] = trimmed.split(':');
                 let value = valueParts.join(':').trim();
                 
-                // Remove quotes from value
-                if (value.startsWith('"') && value.endsWith('"')) {
-                    value = value.slice(1, -1);
-                } else if (value.startsWith("'") && value.endsWith("'")) {
-                    value = value.slice(1, -1);
-                }
-                
                 if (value && key) {
-                    (metadata as any)[key.trim()] = value;
+                    (metadata as any)[key.trim()] = this.unescapeYamlValue(value);
                 } else if (key) {
                     currentKey = key.trim();
                     currentArray = [];
@@ -397,6 +444,22 @@ export class CitationFileService {
         }
         
         return metadata;
+    }
+
+    /**
+     * Unescape a YAML value (reverse of escapeYamlValue)
+     */
+    private unescapeYamlValue(value: string): string {
+        // Remove quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+        }
+        
+        // Unescape double quotes and backslashes
+        return value
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
     }
 
     /**

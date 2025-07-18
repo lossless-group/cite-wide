@@ -214,22 +214,60 @@ export default class CiteWidePlugin extends Plugin {
                     // Check if the selection looks like a citation reference with URL
                     const cleanSelection = selection.trim();
                     
-                    const citationWithUrlRegex = /"?\[\^([a-zA-Z0-9]+)\]:\s*(https?:\/\/[^\s]+)"?/;
-                    let citationMatch = cleanSelection.match(citationWithUrlRegex);
+                    // First, try to match citation with markdown link format: [^hexId]: [title](url)
+                    const citationWithMarkdownLinkRegex = /\[\^([a-zA-Z0-9]+)\]:\s*\[([^\]]+)\]\(([^)]+)\)/;
+                    let citationMatch = cleanSelection.match(citationWithMarkdownLinkRegex);
+                    console.log('Markdown link regex match:', citationMatch);
+                    
+                    // If that doesn't work, try direct URL format: [^hexId]: url
+                    if (!citationMatch) {
+                        const citationWithUrlRegex = /"?\[\^([a-zA-Z0-9]+)\]:\s*(https?:\/\/[^\s]+)"?/;
+                        citationMatch = cleanSelection.match(citationWithUrlRegex);
+                        console.log('Direct URL regex match:', citationMatch);
+                    }
                     
                     // If the first regex doesn't work, try a more flexible one
                     if (!citationMatch) {
                         const flexibleRegex2 = /"?\[\^([a-zA-Z0-9]+)\]:\s*(https?:\/\/[^)\s]+)"?/;
                         citationMatch = cleanSelection.match(flexibleRegex2);
+                        console.log('Flexible regex match:', citationMatch);
                     }
                     
                     let hexId: string;
                     let url: string;
                     
-                    if (citationMatch && citationMatch[1] && citationMatch[2]) {
-                        // This is a citation reference with URL - use existing hex ID
+                    if (citationMatch && citationMatch[1]) {
+                        // This is a citation reference - use existing hex ID
                         hexId = citationMatch[1];
-                        url = citationMatch[2];
+                        
+                        // Check if it's markdown link format (3 groups: hexId, title, url)
+                        if (citationMatch[3]) {
+                            // Markdown link format: [^hexId]: [title](url)
+                            url = citationMatch[3];
+                        } else if (citationMatch[2]) {
+                            // Direct URL format: [^hexId]: url
+                            url = citationMatch[2];
+                        } else {
+                            new Notice('Could not extract URL from citation reference');
+                            return;
+                        }
+                        
+                        // Check if this citation file already exists
+                        const filename = `${hexId}.md`;
+                        const filepath = `${citationFileService.getCitationsFolder()}/${filename}`;
+                        const existingFile = this.app.vault.getAbstractFileByPath(filepath);
+                        
+                        console.log(`Checking for existing citation file: ${filepath}`);
+                        console.log(`Existing file found:`, existingFile);
+                        
+                        if (existingFile instanceof TFile) {
+                            // Citation file already exists - just update usage and notify
+                            const activeFile = this.app.workspace.getActiveFile();
+                            const sourceFile = activeFile ? activeFile.path : '';
+                            await citationFileService.updateCitationUsage(existingFile, sourceFile);
+                            new Notice(`Citation ${hexId} already exists and usage updated`);
+                            return;
+                        }
                     } else {
                         // Check if it's just a URL
                         const urlRegex = /https?:\/\/[^\s]+/;
