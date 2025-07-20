@@ -93,17 +93,7 @@ export default class CiteWidePlugin extends Plugin {
             name: 'Convert All Citations to Hex Format',
             editorCallback: async (editor: Editor) => {
                 try {
-                    const content = editor.getValue();
-                    
-                    // Use the convertAllCitations method which handles all citations at once
-                    const result = citationService.convertAllCitations(content);
-                    
-                    if (result.changed) {
-                        editor.setValue(result.content);
-                        new Notice(`Updated ${result.stats.citationsConverted} citations`);
-                    } else {
-                        new Notice('No citations needed conversion');
-                    }
+                    await this.convertAllCitations(editor);
                 } catch (error) {
                     const errorMsg = error instanceof Error ? error.message : String(error);
                     new Notice('Error processing citations: ' + errorMsg);
@@ -169,6 +159,21 @@ export default class CiteWidePlugin extends Plugin {
                 const processed = cleanReferencesSectionService.addColonSyntaxWhereNone(selection);
                 editor.replaceSelection(processed);
                 new Notice('References cleaned up successfully');
+            }
+        });
+
+        // Command to convert citation section to footnotes
+        this.addCommand({
+            id: 'convert-citation-section-to-footnotes',
+            name: 'Convert Citation Section to Footnotes',
+            editorCallback: (editor: Editor) => {
+                const selection = editor.getSelection();
+                if (!selection) {
+                    new Notice('Please select a citation section first');
+                    return;
+                }
+                
+                this.convertCitationSectionToFootnotes(editor, selection);
             }
         });
     }
@@ -394,6 +399,88 @@ export default class CiteWidePlugin extends Plugin {
         }
         new Notice(`Citation extracted successfully: ${result.hexId}`);
     }
+
+    /**
+     * Convert all citations to hex format - shared logic for both command and modal
+     */
+    private async convertAllCitations(editor: Editor): Promise<void> {
+        const content = editor.getValue();
+        let updatedContent = content;
+        let totalConverted = 0;
+
+        // Extract all citation groups
+        const citationGroups = citationService.extractCitations(content);
+
+        // Process each group
+        for (const group of citationGroups) {
+            const result = citationService.convertCitation(
+                updatedContent,
+                group.number
+            );
+
+            if (result.changed) {
+                updatedContent = result.content;
+                totalConverted += result.stats.citationsConverted;
+            }
+        }
+
+        if (totalConverted > 0) {
+            editor.setValue(updatedContent);
+            new Notice(`Converted ${totalConverted} citations to hex format`);
+        } else {
+            new Notice('No citations were converted');
+        }
+    }
+
+    /**
+     * Convert a citation section to proper Obsidian footnotes
+     * Creates footnote references in the text and moves definitions to the bottom
+     */
+    private convertCitationSectionToFootnotes(editor: Editor, selection: string): void {
+        const lines = selection.split('\n').filter(line => line.trim());
+        const footnotes: string[] = [];
+        const references: string[] = [];
+    
+        // Process each line to extract citations
+        lines.forEach(line => {
+            const citationRegex = /^(\[\^[a-zA-Z0-9]+\])\s*(.+)$/;
+            const match = line.match(citationRegex);
+    
+            if (match && match[1] && match[2]) {
+                const hexId = match[1]; // [^hexId]
+                const content = match[2]; // rest of the line
+    
+                references.push(hexId);
+                footnotes.push(`${hexId}: ${content}`);
+            }
+        });
+    
+        if (footnotes.length === 0) {
+            new Notice('No valid citations found in selection');
+            return;
+        }
+    
+        // Get current document content
+        const content = editor.getValue();
+    
+        // Remove the selected text from the document
+        const start = editor.getCursor('from'); // selection start
+        const end = editor.getCursor('to');     // selection end
+        editor.replaceRange('', start, end);    // removes selection in editor
+    
+        // Get the updated content after removal
+        const newContent = editor.getValue();
+    
+        // Create footnotes section
+        const footnotesSection = '\n\n# Footnotes\n\n' + footnotes.join('\n\n');
+    
+        // Append footnotes section to the updated content
+        const updatedContent = newContent + footnotesSection;
+    
+        editor.setValue(updatedContent);
+        new Notice(`Created ${footnotes.length} footnotes`);
+    }
+    
 
     private registerLinkFormattingCommands(): void {
         // Command to format links in the selected text
