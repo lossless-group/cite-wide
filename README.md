@@ -1,4 +1,4 @@
-![Cite Wide Obsidian Plugin Banner](https://i.imgur.com/CJ18gyp.png)
+![Cite Wide: An Obsidian Community Plugin by The Lossless Group](https://i.imgur.com/CJ18gyp.png)
 
 # Cite Wide Obsidian Plugin
 
