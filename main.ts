@@ -142,6 +142,31 @@ export default class CiteWidePlugin extends Plugin {
                 }
             }
         });
+
+        // Command to convert selected citation to hex format
+        this.addCommand({
+            id: 'convert-selected-citation-to-hex',
+            name: 'Convert Selected Citation to Hex',
+            editorCallback: (editor: Editor) => {
+                const selection = editor.getSelection();
+                if (!selection) {
+                    new Notice('Please select a citation reference first (e.g., "[1]: content")');
+                    return;
+                }
+                
+                const result = citationService.convertSelectedCitationToHex(selection);
+                
+                if (result.changed) {
+                    editor.replaceSelection(result.content);
+                    // Extract the hex ID from the converted content for the notice
+                    const hexMatch = result.content.match(/\[\^([a-zA-Z0-9]+)\]/);
+                    const hexId = hexMatch ? hexMatch[1] : 'unknown';
+                    new Notice(`Converted citation to hex format: [^${hexId}]`);
+                } else {
+                    new Notice('Selected text does not appear to be a valid citation reference');
+                }
+            }
+        });
     }
 
     private registerReferenceCleanupCommands(): void {
@@ -435,6 +460,7 @@ export default class CiteWidePlugin extends Plugin {
     /**
      * Convert a citation section to proper Obsidian footnotes
      * Creates footnote references in the text and moves definitions to the bottom
+     * Handles both numeric citations [1]: and hex citations [^hexId]:, converting numeric to hex
      */
     private convertCitationSectionToFootnotes(editor: Editor, selection: string): void {
         const lines = selection.split('\n').filter(line => line.trim());
@@ -443,15 +469,32 @@ export default class CiteWidePlugin extends Plugin {
     
         // Process each line to extract citations
         lines.forEach(line => {
-            const citationRegex = /^(\[\^[a-zA-Z0-9]+\])\s*(.+)$/;
-            const match = line.match(citationRegex);
+            // Match both hex citations [^hexId]: and numeric citations [1]:
+            const hexCitationRegex = /^(\[\^[a-zA-Z0-9]+\])\s*(.+)$/;
+            const numericCitationRegex = /^(\[\d+\]):\s*(.+)$/;
+            
+            let match = line.match(hexCitationRegex);
+            let isHexCitation = true;
+            
+            if (!match) {
+                match = line.match(numericCitationRegex);
+                isHexCitation = false;
+            }
     
             if (match && match[1] && match[2]) {
-                const hexId = match[1]; // [^hexId]
+                const citationId = match[1]; // [^hexId] or [1]
                 const content = match[2]; // rest of the line
     
-                references.push(hexId);
-                footnotes.push(`${hexId}: ${content}`);
+                if (isHexCitation) {
+                    // For hex citations, keep the original format
+                    references.push(citationId);
+                    footnotes.push(`${citationId}: ${content}`);
+                } else {
+                    // For numeric citations, convert to hex format
+                    const hexId = citationService.getNewHexId();
+                    references.push(`[^${hexId}]`);
+                    footnotes.push(`[^${hexId}]: ${content}`);
+                }
             }
         });
     
@@ -459,9 +502,6 @@ export default class CiteWidePlugin extends Plugin {
             new Notice('No valid citations found in selection');
             return;
         }
-    
-        // Get current document content
-        const content = editor.getValue();
     
         // Remove the selected text from the document
         const start = editor.getCursor('from'); // selection start

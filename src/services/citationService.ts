@@ -453,6 +453,35 @@ export class CitationService {
     public fixCitationPunctuation(content: string): string {
         return this.moveCitationsBehindPunctuation(content);
     }
+
+    /**
+     * Convert a selected citation reference to hex format
+     * Takes a reference line like "[1]: content" and converts it to "[^hexId]: content"
+     */
+    public convertSelectedCitationToHex(selectedText: string): ConversionResult {
+        // Match reference format: [number]: content
+        const referenceRegex = /^(\s*)\[(\d+)\]\s*:?\s*(.+)$/;
+        const match = selectedText.match(referenceRegex);
+        
+        if (!match) {
+            return {
+                content: selectedText,
+                changed: false,
+                stats: { citationsConverted: 0 }
+            };
+        }
+        
+        const [, leadingSpaces, , content] = match;
+        const hexId = this.generateHexId();
+        
+        const convertedText = `${leadingSpaces}[^${hexId}]: ${content}`;
+        
+        return {
+            content: convertedText,
+            changed: true,
+            stats: { citationsConverted: 1 }
+        };
+    }
 }
 
 // Singleton instance
