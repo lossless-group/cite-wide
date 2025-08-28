@@ -40,6 +40,23 @@
     white-space: nowrap;
 }
 
+.cite-wide-header-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.cite-wide-save-all-hex-btn {
+    background-color: var(--interactive-success);
+    color: var(--text-on-accent);
+    border: 1px solid var(--interactive-success-hover);
+    white-space: nowrap;
+}
+
+.cite-wide-save-all-hex-btn:hover {
+    background-color: var(--interactive-success-hover);
+}
+
 .cite-wide-group {
     margin-bottom: 1.5rem;
     border: 1px solid var(--background-modifier-border);
@@ -146,6 +163,13 @@
     background-color: var(--background-modifier-border);
 }
 
+.cite-wide-badge-hex {
+    color: var(--text-on-accent);
+    background-color: var(--interactive-accent);
+    font-size: 0.7em;
+    padding: 0.1em 0.4em;
+}
+
 /* Adjust line info spacing when badge is present */
 .cite-wide-line-info > .cite-wide-badge + span {
     margin-left: 0.5rem;
@@ -158,6 +182,7 @@
 }
 
 .cite-wide-convert-btn,
+.cite-wide-save-btn,
 .cite-wide-view-btn {
     white-space: nowrap;
     padding: 0.25rem 0.75rem;
@@ -176,6 +201,17 @@
 
 .cite-wide-convert-btn:hover {
     background-color: var(--interactive-accent-hover);
+}
+
+.cite-wide-save-btn {
+    background-color: var(--interactive-success);
+    color: var(--text-on-accent);
+    border: 1px solid var(--interactive-success-hover);
+    margin-left: 10rem;
+}
+
+.cite-wide-save-btn:hover {
+    background-color: var(--interactive-success-hover);
 }
 
 .cite-wide-view-btn {

@@ -101,6 +101,20 @@ export default class CiteWidePlugin extends Plugin {
             }
         });
 
+        // Command to save all hex citations to citation files
+        this.addCommand({
+            id: 'save-all-hex-citations',
+            name: 'Save All Hex Citations to Citation Files',
+            editorCallback: async (editor: Editor) => {
+                try {
+                    await this.saveAllHexCitations(editor);
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    new Notice('Error saving hex citations: ' + errorMsg);
+                }
+            }
+        });
+
         // Command to insert a new citation
         this.addCommand({
             id: 'insert-hex-citation',
@@ -454,6 +468,34 @@ export default class CiteWidePlugin extends Plugin {
             new Notice(`Converted ${totalConverted} citations to hex format`);
         } else {
             new Notice('No citations were converted');
+        }
+    }
+
+    /**
+     * Save all hex citations to citation files - shared logic for both command and modal
+     */
+    private async saveAllHexCitations(editor: Editor): Promise<void> {
+        const content = editor.getValue();
+        
+        // Get the current file path for tracking
+        const activeFile = this.app.workspace.getActiveFile();
+        const sourceFile = activeFile ? activeFile.path : '';
+
+        // Use the shared service method
+        const result = await citationFileService.saveAllHexCitationsFromContent(content, sourceFile);
+
+        if (result.saved > 0 || result.updated > 0) {
+            let message = '';
+            if (result.saved > 0) {
+                message += `Saved ${result.saved} new citation(s)`;
+            }
+            if (result.updated > 0) {
+                if (message) message += ', ';
+                message += `Updated ${result.updated} existing citation(s)`;
+            }
+            new Notice(message);
+        } else {
+            new Notice('No hex citations were saved');
         }
     }
 

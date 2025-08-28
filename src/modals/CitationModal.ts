@@ -1,7 +1,8 @@
 // cite-wide/src/modals/CitationModal.ts
-import { App, Modal, Notice, Editor } from 'obsidian';
+import { App, Modal, Notice, Editor, TFile } from 'obsidian';
 import { citationService } from '../services/citationService';
 import type { CitationGroup, CitationMatch } from '../services/citationService';
+import { citationFileService } from '../services/citationFileService';
 
 export class CitationModal extends Modal {
     private editor: Editor;
@@ -56,12 +57,30 @@ export class CitationModal extends Modal {
             cls: 'cite-wide-title'
         });
         
-        // Add convert all button on the right
-        const convertAllBtn = header.createEl('button', {
-            text: 'Convert All',
-            cls: 'mod-cta cite-wide-convert-all-btn'
-        });
-        convertAllBtn.addEventListener('click', () => this.convertAllCitations());
+        // Count numeric and hex citations
+        const numericCitationCount = this.citationGroups.filter(group => !group.number.startsWith('hex_')).length;
+        const hexCitationCount = this.citationGroups.filter(group => group.number.startsWith('hex_')).length;
+        
+        // Create button container for multiple buttons
+        const buttonContainer = header.createDiv('cite-wide-header-buttons');
+        
+        // Add convert all button (only if there are numeric citations)
+        if (numericCitationCount > 0) {
+            const convertAllBtn = buttonContainer.createEl('button', {
+                text: `Convert All (${numericCitationCount})`,
+                cls: 'mod-cta cite-wide-convert-all-btn'
+            });
+            convertAllBtn.addEventListener('click', () => this.convertAllCitations());
+        }
+        
+        // Add save all hex citations button (only if there are hex citations)
+        if (hexCitationCount > 0) {
+            const saveAllHexBtn = buttonContainer.createEl('button', {
+                text: `Save All Hex (${hexCitationCount})`,
+                cls: 'mod-cta cite-wide-save-all-hex-btn'
+            });
+            saveAllHexBtn.addEventListener('click', () => this.saveAllHexCitations());
+        }
 
         // Add each citation group
         for (const group of this.citationGroups) {
@@ -80,10 +99,12 @@ export class CitationModal extends Modal {
             ? `^${group.number.replace('hex_', '')}` 
             : group.number;
             
-        headerContent.createEl('h3', { 
+        const titleEl = headerContent.createEl('h3', { 
             text: `Citation [${displayNumber}] (${group.matches.length} instances)`,
             cls: 'cite-wide-group-title'
         });
+        
+
 
         if (group.url) {
             headerContent.createEl('a', {
@@ -94,16 +115,36 @@ export class CitationModal extends Modal {
             });
         }
 
-        // Add convert button
-        const convertBtn = header.createEl('button', {
-            text: 'Convert to Hex',
-            cls: 'mod-cta cite-wide-convert-btn'
-        });
+        // Add convert button only for numeric citations (not hex citations)
+        if (!group.number.startsWith('hex_')) {
+            const convertBtn = header.createEl('button', {
+                text: 'Convert to Hex',
+                cls: 'mod-cta cite-wide-convert-btn'
+            });
 
-        convertBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.convertCitationGroup(group);
-        });
+            convertBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.convertCitationGroup(group);
+            });
+        } else {
+            // Add save button for hex citations
+            const saveBtn = header.createEl('button', {
+                text: 'Save to Citations',
+                cls: 'mod-cta cite-wide-save-btn'
+            });
+
+            saveBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const result = await this.saveHexCitationToFile(group);
+                if (result === 'saved') {
+                    new Notice(`Citation saved to Citations folder: ${group.number.replace('hex_', '')}.md`);
+                } else if (result === 'updated') {
+                    new Notice(`Citation ${group.number.replace('hex_', '')} already exists and usage updated`);
+                } else if (result === 'error') {
+                    new Notice('Failed to save citation file');
+                }
+            });
+        }
 
         // Create collapsible content
         const content = groupEl.createDiv('cite-wide-group-content');
@@ -163,8 +204,8 @@ export class CitationModal extends Modal {
                 });
             }
 
-            // Only add convert button for non-reference entries
-            if (!isRefSource) {
+            // Only add convert button for non-reference entries and numeric citations (not hex citations)
+            if (!isRefSource && !group.number.startsWith('hex_')) {
                 const convertBtn = btnContainer.createEl('button', {
                     text: 'Convert',
                     cls: 'mod-cta cite-wide-convert-btn'
@@ -233,8 +274,13 @@ export class CitationModal extends Modal {
             let updatedContent = this.content;
             let totalConverted = 0;
 
-            // Process each group
+            // Process each group, but only numeric citations (not hex citations)
             for (const group of this.citationGroups) {
+                // Skip hex citations that are already converted
+                if (group.number.startsWith('hex_')) {
+                    continue;
+                }
+                
                 const result = citationService.convertCitation(
                     updatedContent,
                     group.number
@@ -256,6 +302,34 @@ export class CitationModal extends Modal {
         } catch (error) {
             console.error('Error converting citations:', error);
             new Notice('Error converting citations. See console for details.');
+        }
+    }
+
+    private async saveAllHexCitations() {
+        try {
+            // Get the current file path for tracking
+            const activeFile = this.app.workspace.getActiveFile();
+            const sourceFile = activeFile ? activeFile.path : '';
+
+            // Use the shared service method
+            const result = await citationFileService.saveAllHexCitationsFromContent(this.content, sourceFile);
+
+            if (result.saved > 0 || result.updated > 0) {
+                let message = '';
+                if (result.saved > 0) {
+                    message += `Saved ${result.saved} new citation(s)`;
+                }
+                if (result.updated > 0) {
+                    if (message) message += ', ';
+                    message += `Updated ${result.updated} existing citation(s)`;
+                }
+                new Notice(message);
+            } else {
+                new Notice('No hex citations were saved');
+            }
+        } catch (error) {
+            console.error('Error saving hex citations:', error);
+            new Notice('Error saving hex citations. See console for details.');
         }
     }
 
@@ -331,6 +405,65 @@ export class CitationModal extends Modal {
         } catch (error) {
             console.error('Error scrolling to line:', error);
             this.close();
+        }
+    }
+
+    private async saveHexCitationToFile(group: CitationGroup): Promise<'saved' | 'updated' | 'error' | null> {
+        try {
+            // Extract the hex ID from the group number
+            const hexId = group.number.replace('hex_', '');
+            
+            // Check if citation file already exists
+            const filename = `${hexId}.md`;
+            const filepath = `${citationFileService.getCitationsFolder()}/${filename}`;
+            const existingFile = this.app.vault.getAbstractFileByPath(filepath);
+            
+            if (existingFile instanceof TFile) {
+                // File already exists - just update usage
+                const activeFile = this.app.workspace.getActiveFile();
+                const sourceFile = activeFile ? activeFile.path : '';
+                await citationFileService.updateCitationUsage(existingFile, sourceFile);
+                return 'updated';
+            }
+            
+            // Find the reference source (the actual citation text)
+            const referenceMatch = group.matches.find(match => match.isReferenceSource);
+            
+            if (!referenceMatch) {
+                return 'error';
+            }
+            
+            // Extract the reference text (everything after the [^hexId]: part)
+            const referenceText = referenceMatch.lineContent.replace(/^\s*\[\^[a-z0-9]+\]:\s*/, '').trim();
+            
+            // Extract URL from the reference text if it exists
+            let url: string | undefined;
+            const urlMatch = referenceText.match(/https?:\/\/[^\s\)]+/);
+            if (urlMatch) {
+                url = urlMatch[0];
+            }
+            
+            // Get the current file path for tracking
+            const activeFile = this.app.workspace.getActiveFile();
+            const sourceFile = activeFile ? activeFile.path : '';
+            
+            // Create the citation file
+            const result = await citationFileService.createCitationFile(
+                hexId,
+                referenceText,
+                url,
+                sourceFile
+            );
+            
+            if (result) {
+                return 'saved';
+            } else {
+                return 'error';
+            }
+            
+        } catch (error) {
+            console.error('Error saving hex citation to file:', error);
+            return 'error';
         }
     }
 

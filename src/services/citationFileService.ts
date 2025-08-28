@@ -591,6 +591,102 @@ export class CitationFileService {
     }
 
     /**
+     * Save all hex citations from a document to citation files
+     * This is a shared method that can be used by both the modal and commands
+     */
+    public async saveAllHexCitationsFromContent(content: string, sourceFile?: string): Promise<{ saved: number; updated: number; errors: number }> {
+        try {
+            // Import citation service dynamically to avoid circular dependencies
+            const { citationService } = await import('./citationService');
+            
+            // Extract all citations from the content
+            const citationGroups = citationService.extractCitations(content);
+            
+            let saved = 0;
+            let updated = 0;
+            let errors = 0;
+
+            // Process each hex citation group
+            for (const group of citationGroups) {
+                if (!group.number.startsWith('hex_')) {
+                    continue; // Skip non-hex citations
+                }
+
+                const result = await this.saveHexCitationFromGroup(group, sourceFile);
+                if (result === 'saved') {
+                    saved++;
+                } else if (result === 'updated') {
+                    updated++;
+                } else {
+                    errors++;
+                }
+            }
+
+            return { saved, updated, errors };
+        } catch (error) {
+            console.error('Error saving all hex citations:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Save a single hex citation from a citation group
+     * This is a shared method that can be used by both the modal and commands
+     */
+    private async saveHexCitationFromGroup(group: any, sourceFile?: string): Promise<'saved' | 'updated' | 'error'> {
+        try {
+            // Extract the hex ID from the group number
+            const hexId = group.number.replace('hex_', '');
+            
+            // Check if citation file already exists
+            const filename = `${hexId}.md`;
+            const filepath = `${this.citationsFolder}/${filename}`;
+            const existingFile = this.app.vault.getAbstractFileByPath(filepath);
+            
+            if (existingFile instanceof TFile) {
+                // File already exists - just update usage
+                await this.updateCitationUsage(existingFile, sourceFile);
+                return 'updated';
+            }
+            
+            // Find the reference source (the actual citation text)
+            const referenceMatch = group.matches.find((match: any) => match.isReferenceSource);
+            
+            if (!referenceMatch) {
+                return 'error';
+            }
+            
+            // Extract the reference text (everything after the [^hexId]: part)
+            const referenceText = referenceMatch.lineContent.replace(/^\s*\[\^[a-z0-9]+\]:\s*/, '').trim();
+            
+            // Extract URL from the reference text if it exists
+            let url: string | undefined;
+            const urlMatch = referenceText.match(/https?:\/\/[^\s\)]+/);
+            if (urlMatch) {
+                url = urlMatch[0];
+            }
+            
+            // Create the citation file
+            const result = await this.createCitationFile(
+                hexId,
+                referenceText,
+                url,
+                sourceFile
+            );
+            
+            if (result) {
+                return 'saved';
+            } else {
+                return 'error';
+            }
+            
+        } catch (error) {
+            console.error('Error saving hex citation from group:', error);
+            return 'error';
+        }
+    }
+
+    /**
      * Assemble citation text from metadata
      */
     public assembleCitationText(metadata: CitationMetadata): string {
