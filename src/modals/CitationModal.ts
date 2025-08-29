@@ -95,6 +95,26 @@ export class CitationModal extends Modal {
         // Create a collapsible header
         const headerContent = header.createDiv('cite-wide-group-header-content');
 
+        // Add citation number/ID display
+        headerContent.createEl('span', {
+            text: group.number.startsWith('hex_') ? `[^${group.number.replace('hex_', '')}]` : `[${group.number}]`,
+            cls: 'cite-wide-citation-id'
+        });
+
+        // Add citation text preview in header
+        const referenceMatch = group.matches.find(match => match.isReferenceSource);
+        if (referenceMatch) {
+            const citationText = referenceMatch.lineContent.replace(/^\s*\[[^\]]+\]:\s*/, '').trim();
+            const previewText = citationText.length > 80 
+                ? `${citationText.substring(0, 80)}...` 
+                : citationText;
+            
+            headerContent.createEl('span', {
+                text: previewText,
+                cls: 'cite-wide-citation-preview'
+            });
+        }
+
         if (group.url) {
             headerContent.createEl('a', {
                 href: group.url,
@@ -144,10 +164,29 @@ export class CitationModal extends Modal {
             content.style.display = content.style.display === 'none' ? 'block' : 'none';
         });
 
+        // Add full citation text section
+        if (referenceMatch) {
+            const citationTextSection = content.createDiv('cite-wide-citation-text-section');
+            citationTextSection.createEl('h4', { text: 'Citation Text' });
+            
+            const citationText = referenceMatch.lineContent.replace(/^\s*\[[^\]]+\]:\s*/, '').trim();
+            citationTextSection.createEl('div', {
+                text: citationText,
+                cls: 'cite-wide-citation-text'
+            });
+            
+            // Add a separator
+            content.createEl('hr', { cls: 'cite-wide-separator' });
+        }
+
+        // Add section for citation instances
+        const instancesSection = content.createDiv('cite-wide-instances-section');
+        instancesSection.createEl('h4', { text: 'Citation Instances' });
+
         // Add each citation instance
         group.matches.forEach((match: CitationMatch, matchIndex: number) => {
             const isRefSource = match.isReferenceSource === true;
-            const instanceEl = content.createDiv(`cite-wide-instance ${isRefSource ? 'cite-wide-reference-source' : ''}`);
+            const instanceEl = instancesSection.createDiv(`cite-wide-instance ${isRefSource ? 'cite-wide-reference-source' : ''}`);
             
             // Show line number and preview
             const lineInfo = instanceEl.createDiv('cite-wide-line-info');

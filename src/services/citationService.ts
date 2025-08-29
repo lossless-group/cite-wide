@@ -155,8 +155,17 @@ export class CitationService {
                 const number = refMatch[1];
                 
                 // Find the corresponding citation group
-                const group = groups.get(number);
-                if (group && refMatch[0]) {
+                let group = groups.get(number);
+                if (!group) {
+                    // Create a new group for unreferenced citations
+                    group = {
+                        number,
+                        matches: []
+                    };
+                    groups.set(number, group);
+                }
+                
+                if (refMatch[0]) {
                     // Create a reference match
                     const refCitationMatch: CitationMatch = {
                         number,
@@ -181,8 +190,17 @@ export class CitationService {
                 const number = `hex_${hexId}`; // Use the same prefix as in citation detection
                 
                 // Find the corresponding citation group
-                const group = groups.get(number);
-                if (group && refMatch[0]) {
+                let group = groups.get(number);
+                if (!group) {
+                    // Create a new group for unreferenced citations
+                    group = {
+                        number,
+                        matches: []
+                    };
+                    groups.set(number, group);
+                }
+                
+                if (refMatch[0]) {
                     // Create a reference match
                     const refCitationMatch: CitationMatch = {
                         number,
@@ -196,8 +214,6 @@ export class CitationService {
                     
                     referenceDefinitions.set(number, refCitationMatch);
                     group.matches.push(refCitationMatch);
-                } else {
-                    console.log('Debug: No corresponding citation group found for hex reference:', number);
                 }
             } else {
                 // Debug: Check if the line looks like a hex reference but didn't match
@@ -207,10 +223,23 @@ export class CitationService {
             }
         }
 
+        // Extract URLs from reference text for each group
+        for (const group of groups.values()) {
+            const referenceMatch = group.matches.find(match => match.isReferenceSource);
+            if (referenceMatch) {
+                const referenceText = referenceMatch.lineContent.replace(/^\s*\[[^\]]+\]:\s*/, '').trim();
+                const urlMatch = referenceText.match(/https?:\/\/[^\s\)]+/);
+                if (urlMatch) {
+                    group.url = urlMatch[0];
+                }
+            }
+        }
+
         console.log('Debug: Final citation groups:', Array.from(groups.values()).map(g => ({
             number: g.number,
             matchCount: g.matches.length,
-            references: g.matches.filter(m => m.isReference).length
+            references: g.matches.filter(m => m.isReference).length,
+            hasUrl: !!g.url
         })));
         
         return Array.from(groups.values());
