@@ -419,24 +419,29 @@ export default class CiteWidePlugin extends Plugin {
         }
         // Replace the URL with the full formatted citation
         editor.replaceSelection(result.citation);
-        // Create citation file for Dataview integration
-        const activeFile = this.app.workspace.getActiveFile();
-        const sourceFile = activeFile ? activeFile.path : '';
-        if (result.citationData) {
-            await citationFileService.createCitationFileWithData(
-                result.hexId,
-                result.citationData,
-                sourceFile
-            );
+        
+        // Create citation file for Dataview integration only if auto-save is enabled
+        if (this.settings.autoSaveUrlCitations) {
+            const activeFile = this.app.workspace.getActiveFile();
+            const sourceFile = activeFile ? activeFile.path : '';
+            if (result.citationData) {
+                await citationFileService.createCitationFileWithData(
+                    result.hexId,
+                    result.citationData,
+                    sourceFile
+                );
+            } else {
+                await citationFileService.createCitationFile(
+                    result.hexId, 
+                    result.citation, 
+                    url, 
+                    sourceFile
+                );
+            }
+            new Notice(`Citation extracted and saved: ${result.hexId}`);
         } else {
-            await citationFileService.createCitationFile(
-                result.hexId, 
-                result.citation, 
-                url, 
-                sourceFile
-            );
+            new Notice(`Citation extracted successfully: ${result.hexId} (not saved to file)`);
         }
-        new Notice(`Citation extracted successfully: ${result.hexId}`);
     }
 
     /**

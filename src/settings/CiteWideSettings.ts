@@ -7,11 +7,13 @@ import { citationFileService } from '../services/citationFileService';
 export interface CiteWideSettings {
     jinaApiKey: string;
     citationsFolder: string;
+    autoSaveUrlCitations: boolean;
 }
 
 export const DEFAULT_SETTINGS: CiteWideSettings = {
     jinaApiKey: '',
-    citationsFolder: 'Citations'
+    citationsFolder: 'Citations',
+    autoSaveUrlCitations: true
 };
 
 export class CiteWideSettingTab extends PluginSettingTab {
@@ -51,6 +53,17 @@ export class CiteWideSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.citationsFolder = value;
                     citationFileService.setCitationsFolder(value);
+                    await this.plugin.saveSettings();
+                }));
+
+        // Auto-save URL citations setting
+        new Setting(containerEl)
+            .setName('Auto-save URL Citations')
+            .setDesc('Automatically save citations extracted from URLs as citation files. When disabled, citations will only be added to the document without creating separate files.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.autoSaveUrlCitations)
+                .onChange(async (value) => {
+                    this.plugin.settings.autoSaveUrlCitations = value;
                     await this.plugin.saveSettings();
                 }));
 

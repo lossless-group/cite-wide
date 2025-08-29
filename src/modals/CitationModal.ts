@@ -94,17 +94,6 @@ export class CitationModal extends Modal {
         
         // Create a collapsible header
         const headerContent = header.createDiv('cite-wide-group-header-content');
-        // Display the original citation format instead of the internal group number
-        const displayNumber = group.number.startsWith('hex_') 
-            ? `^${group.number.replace('hex_', '')}` 
-            : group.number;
-            
-        const titleEl = headerContent.createEl('h3', { 
-            text: `Citation [${displayNumber}] (${group.matches.length} instances)`,
-            cls: 'cite-wide-group-title'
-        });
-        
-
 
         if (group.url) {
             headerContent.createEl('a', {
