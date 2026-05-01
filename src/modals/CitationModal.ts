@@ -102,7 +102,7 @@ export class CitationModal extends Modal {
 
         convertBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.convertCitationGroup(group);
+            void this.convertCitationGroup(group);
         });
 
         // Create collapsible content
