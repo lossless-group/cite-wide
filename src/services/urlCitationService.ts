@@ -1,5 +1,7 @@
 // cite-wide/src/services/urlCitationService.ts
 
+import { asString, isRecord } from '../utils/coerce';
+
 export interface CitationData {
     title: string;
     author?: string | undefined;
@@ -95,9 +97,9 @@ export class UrlCitationService {
                 throw new Error(`Reader API request failed: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const data: unknown = await response.json();
             console.log('Reader API response:', data);
-            
+
             // Extract citation data from the Reader API response
             const citationData = this.parseReaderResponse(data, url);
             return citationData;
@@ -109,86 +111,72 @@ export class UrlCitationService {
     }
 
     /**
-     * Parse the Reader API response from Jina.ai
+     * Parse the Reader API response from Jina.ai. The framework returns
+     * `unknown` from response.json(); we narrow at the boundary using
+     * isRecord + asString (see context-v/reminders/Obsidian-Type-Safety.md §3).
      */
-    private parseReaderResponse(data: any, originalUrl: string): CitationData | null {
+    private parseReaderResponse(data: unknown, originalUrl: string): CitationData | null {
         try {
-            
-            // The Reader API response has the actual data nested under data.data
-            const responseData = data.data || data;
-            
-            // Extract title from multiple possible locations
-            const title = responseData.title || 
-                         responseData.metadata?.['og:title'] || 
-                         responseData.metadata?.title || 
-                         'Unknown Title';
-            
-            // Extract date from published time
+            // Response may be wrapped as `{ data: {...} }` or flat at the root.
+            if (!isRecord(data)) return this.fallbackCitation(originalUrl);
+            const root: Record<string, unknown> = isRecord(data['data']) ? data['data'] : data;
+            const meta: Record<string, unknown> | null = isRecord(root['metadata']) ? root['metadata'] : null;
+
+            const title = asString(root['title'])
+                || (meta && (asString(meta['og:title']) || asString(meta['title'])))
+                || 'Unknown Title';
+
             let date: string | undefined;
-            const publishedTime = responseData.publishedTime || 
-                                responseData.metadata?.['article:published_time'] ||
-                                responseData.metadata?.['og:article:published_time'];
-            
+            const publishedTime = asString(root['publishedTime'])
+                || (meta && (asString(meta['article:published_time']) || asString(meta['og:article:published_time'])))
+                || undefined;
             if (publishedTime) {
-                try {
-                    const dateObj = new Date(publishedTime);
-                    if (!isNaN(dateObj.getTime())) {
-                        date = dateObj.toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'short' 
-                        });
-                    }
-                } catch (e) {
+                const dateObj = new Date(publishedTime);
+                if (!Number.isNaN(dateObj.getTime())) {
+                    date = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                } else {
                     console.warn('Could not parse published time:', publishedTime);
                 }
             }
-            
-            // Extract author from metadata or content
+
             let author: string | undefined;
-            if (responseData.metadata?.author) {
-                author = responseData.metadata.author;
-            } else if (responseData.metadata?.['twitter:data1']) {
-                author = responseData.metadata['twitter:data1'];
-            } else if (responseData.content) {
-                // Try to extract author from content
-                const authorMatch = responseData.content.match(/by\s+([^,\n]+)/i) ||
-                                  responseData.content.match(/author[:\s]+([^,\n]+)/i) ||
-                                  responseData.content.match(/Written by\s+([^,\n]+)/i);
-                if (authorMatch) {
-                    author = authorMatch[1].trim();
+            if (meta) {
+                author = asString(meta['author']) || asString(meta['twitter:data1']);
+            }
+            if (!author) {
+                const content = asString(root['content']);
+                if (content) {
+                    const m = content.match(/by\s+([^,\n]+)/i)
+                        || content.match(/author[:\s]+([^,\n]+)/i)
+                        || content.match(/Written by\s+([^,\n]+)/i);
+                    if (m && m[1]) author = m[1].trim();
                 }
             }
-            
-            // Extract site name from metadata or URL
-            const siteName = responseData.metadata?.['og:site_name'] || 
-                           this.extractSiteNameFromUrl(originalUrl || '') || 'Unknown Site';
-            
-            console.log('Extracted citation data:', {
-                title,
-                author,
-                date,
-                url: originalUrl,
-                siteName
-            });
-            
+
+            const siteName = (meta && asString(meta['og:site_name']))
+                || this.extractSiteNameFromUrl(originalUrl);
+
+            console.log('Extracted citation data:', { title, author, date, url: originalUrl, siteName });
+
             return {
                 title,
                 author: author || undefined,
                 date: date || undefined,
                 url: originalUrl,
-                siteName
+                siteName,
             };
-
         } catch (error) {
             console.error('Error parsing reader response:', error);
-            
-            // Fallback: return basic information
-            return {
-                title: 'Unknown Title',
-                url: originalUrl,
-                siteName: this.extractSiteNameFromUrl(originalUrl || '')
-            };
+            return this.fallbackCitation(originalUrl);
         }
+    }
+
+    private fallbackCitation(originalUrl: string): CitationData {
+        return {
+            title: 'Unknown Title',
+            url: originalUrl,
+            siteName: this.extractSiteNameFromUrl(originalUrl),
+        };
     }
 
     /**
