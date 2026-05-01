@@ -1,6 +1,7 @@
 import { App, Notice, Plugin, Editor, Modal, ButtonComponent, TFile } from 'obsidian';
 import { citationService } from './src/services/citationService';
 import { CitationModal } from './src/modals/CitationModal';
+import { DedupeByUrlModal } from './src/modals/DedupeByUrlModal';
 import { cleanReferencesSectionService } from './src/services/cleanReferencesSectionService';
 import { formatLinksInSelection } from './src/services/linkSyntaxService';
 import { urlCitationService } from './src/services/urlCitationService';
@@ -82,6 +83,15 @@ export default class CiteWidePlugin extends Plugin {
             name: 'Show Citations in Current File',
             editorCallback: (editor: Editor) => {
                 new CitationModal(this.app, editor).open();
+            }
+        });
+
+        // Command to dedupe citations that share the same URL
+        this.addCommand({
+            id: 'dedupe-citations-by-url',
+            name: 'Dedupe Citations by URL',
+            editorCallback: (editor: Editor) => {
+                new DedupeByUrlModal(this.app, editor).open();
             }
         });
 
