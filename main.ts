@@ -312,13 +312,13 @@ export default class CiteWidePlugin extends Plugin {
                     }
 
                     // Check for duplicate citation by URL
-                    const existingCitation = await citationFileService.findCitationByUrl(url);
+                    const existingCitation = citationFileService.findCitationByUrl(url);
                     if (existingCitation) {
                         // Show modal to user: Use existing or create new?
                         const modal = new ConfirmDuplicateCitationModal(this.app, existingCitation, async (useExisting: boolean) => {
                             if (useExisting) {
                                 // Get the full citation text from the existing citation file
-                                const citationText = await citationFileService.getCitationText(existingCitation.hexId);
+                                const citationText = citationFileService.getCitationText(existingCitation.hexId);
                                 console.log('citationText', citationText);
                                 if (citationText) {
                                     // Replace the selected text with the full citation text
