@@ -5,7 +5,7 @@ interface LogEntry {
   timestamp: string;
   level: 'error' | 'warn' | 'info' | 'debug';
   message: string;
-  details?: any;
+  details?: unknown;
   stack?: string;
 }
 
@@ -78,7 +78,7 @@ export class FileLogger {
     }
   }
 
-  private addEntry(level: LogEntry['level'], message: string, details?: any): void {
+  private addEntry(level: LogEntry['level'], message: string, details?: unknown): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -106,19 +106,19 @@ export class FileLogger {
     logMethod(`[${entry.timestamp}] [${level.toUpperCase()}] ${message}`, details || '');
   }
 
-  error(message: string, details?: any): void {
+  error(message: string, details?: unknown): void {
     this.addEntry('error', message, details);
   }
 
-  warn(message: string, details?: any): void {
+  warn(message: string, details?: unknown): void {
     this.addEntry('warn', message, details);
   }
 
-  info(message: string, details?: any): void {
+  info(message: string, details?: unknown): void {
     this.addEntry('info', message, details);
   }
 
-  debug(message: string, details?: any): void {
+  debug(message: string, details?: unknown): void {
     this.addEntry('debug', message, details);
   }
 

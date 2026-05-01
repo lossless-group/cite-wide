@@ -1,13 +1,11 @@
-import { Notice, Plugin, Editor } from 'obsidian';
+import { App, Notice, Plugin, Editor, Modal, ButtonComponent, TFile } from 'obsidian';
 import { citationService } from './src/services/citationService';
 import { CitationModal } from './src/modals/CitationModal';
 import { cleanReferencesSectionService } from './src/services/cleanReferencesSectionService';
 import { formatLinksInSelection } from './src/services/linkSyntaxService';
 import { urlCitationService } from './src/services/urlCitationService';
-import { citationFileService, initializeCitationFileService } from './src/services/citationFileService';
+import { citationFileService, initializeCitationFileService, type CitationMetadata } from './src/services/citationFileService';
 import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
-import { Modal, ButtonComponent } from 'obsidian';
-import { TFile } from 'obsidian';
 
 export default class CiteWidePlugin extends Plugin {
     settings!: CiteWideSettings;
@@ -536,9 +534,9 @@ export default class CiteWidePlugin extends Plugin {
 
 // Modal for confirming duplicate citation usage
 class ConfirmDuplicateCitationModal extends Modal {
-    private existingCitation: any;
+    private existingCitation: CitationMetadata;
     private onDecision: (useExisting: boolean) => void;
-    constructor(app: any, existingCitation: any, onDecision: (useExisting: boolean) => void) {
+    constructor(app: App, existingCitation: CitationMetadata, onDecision: (useExisting: boolean) => void) {
         super(app);
         this.existingCitation = existingCitation;
         this.onDecision = onDecision;

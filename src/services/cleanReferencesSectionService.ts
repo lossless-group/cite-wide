@@ -30,36 +30,8 @@ export function addColonSyntaxWhereNone(text: string): string {
     }).join('\n');
 }
 
-/**
- * Processes the current selection in the active editor to add colon syntax to footnotes
- * @returns A promise that resolves when the operation is complete
- */
-export async function processSelection(): Promise<void> {
-    // This function would be called from a command or UI component
-    // that has access to the Obsidian editor instance
-    const editor = (window as any).activeEditor?.editor;
-    
-    if (!editor) {
-        console.warn('No active editor found');
-        return;
-    }
-    
-    const selection = editor.getSelection();
-    if (!selection) {
-        console.warn('No text selected');
-        return;
-    }
-    
-    // Process the selected text
-    const processedText = addColonSyntaxWhereNone(selection);
-    
-    // Replace the selection with the processed text
-    editor.replaceSelection(processedText);
-}
-
 export const cleanReferencesSectionService = {
-    addColonSyntaxWhereNone,
-    processSelection
+    addColonSyntaxWhereNone
 };
 
 export default cleanReferencesSectionService;
