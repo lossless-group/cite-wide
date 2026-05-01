@@ -95,6 +95,33 @@ export default class CiteWidePlugin extends Plugin {
             }
         });
 
+        // Command to save all hex citations in the active file as canonical citation files
+        this.addCommand({
+            id: 'save-all-hex-citations',
+            name: 'Save All Hex Citations to Citation Files',
+            editorCallback: async (editor: Editor) => {
+                try {
+                    const content = editor.getValue();
+                    const activeFile = this.app.workspace.getActiveFile();
+                    const sourceFile = activeFile ? activeFile.path : '';
+                    const result = await citationFileService.saveAllHexCitationsFromContent(content, sourceFile);
+
+                    if (result.saved === 0 && result.updated === 0 && result.errors === 0) {
+                        new Notice('No hex citations found in this document.');
+                        return;
+                    }
+                    const parts: string[] = [];
+                    if (result.saved > 0) parts.push(`saved ${result.saved}`);
+                    if (result.updated > 0) parts.push(`updated ${result.updated}`);
+                    if (result.errors > 0) parts.push(`${result.errors} error${result.errors === 1 ? '' : 's'}`);
+                    new Notice(`Citations: ${parts.join(', ')}.`);
+                } catch (error) {
+                    const msg = error instanceof Error ? error.message : String(error);
+                    new Notice('Error saving hex citations: ' + msg);
+                }
+            }
+        });
+
         // Command to convert all citations to hex format
         this.addCommand({
             id: 'convert-all-citations',
@@ -413,7 +440,14 @@ export default class CiteWidePlugin extends Plugin {
         }
         // Replace the URL with the full formatted citation
         editor.replaceSelection(result.citation);
-        // Create citation file for Dataview integration
+
+        // Create citation file for Dataview integration only when auto-save is enabled.
+        // Default is off — users canonicalize specific citations explicitly via the
+        // "Save All Hex Citations" command or the per-citation Save button in the modal.
+        if (!this.settings.autoSaveUrlCitations) {
+            new Notice(`Citation extracted: ${result.hexId} (not saved — use "Save All Hex Citations" to canonicalize)`);
+            return;
+        }
         const activeFile = this.app.workspace.getActiveFile();
         const sourceFile = activeFile ? activeFile.path : '';
         if (result.citationData) {
@@ -424,9 +458,9 @@ export default class CiteWidePlugin extends Plugin {
             );
         } else {
             await citationFileService.createCitationFile(
-                result.hexId, 
-                result.citation, 
-                url, 
+                result.hexId,
+                result.citation,
+                url,
                 sourceFile
             );
         }

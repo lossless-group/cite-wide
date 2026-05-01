@@ -1,6 +1,13 @@
 import { App, TFile, TFolder, Notice } from 'obsidian';
 import { asNumber, asString, asStringArray, isRecord } from '../utils/coerce';
 import type { CitationData } from './urlCitationService';
+import { citationService, type CitationGroup } from './citationService';
+
+export interface SaveAllHexResult {
+    saved: number;
+    updated: number;
+    errors: number;
+}
 
 export interface CitationMetadata {
     hexId: string;
@@ -190,6 +197,66 @@ export class CitationFileService {
         };
         walk(folder);
         return files;
+    }
+
+    /**
+     * Walk a document's content, find every hex citation group, and persist
+     * it as a citation file. Hex groups whose file already exists get an
+     * usageCount increment via updateCitationUsage instead of being recreated.
+     *
+     * Numeric citations are skipped — they aren't canonical yet (convert
+     * them to hex first via the Convert command).
+     */
+    public async saveAllHexCitationsFromContent(
+        content: string,
+        sourceFile?: string
+    ): Promise<SaveAllHexResult> {
+        const groups = citationService.extractCitations(content);
+        let saved = 0;
+        let updated = 0;
+        let errors = 0;
+
+        for (const group of groups) {
+            if (!group.number.startsWith('hex_')) continue;
+            const outcome = await this.saveHexCitationGroup(group, sourceFile);
+            if (outcome === 'saved') saved++;
+            else if (outcome === 'updated') updated++;
+            else errors++;
+        }
+
+        return { saved, updated, errors };
+    }
+
+    /**
+     * Persist a single hex citation group as a citation file. If a file with
+     * this hex already exists, increments its usageCount instead of recreating.
+     * Returns 'error' if the group has no reference-section line to read
+     * citation text from.
+     */
+    public async saveHexCitationGroup(
+        group: CitationGroup,
+        sourceFile: string | undefined
+    ): Promise<'saved' | 'updated' | 'error'> {
+        const hexId = group.number.replace('hex_', '');
+        const filepath = `${this.citationsFolder}/${hexId}.md`;
+        const existing = this.app.vault.getAbstractFileByPath(filepath);
+
+        if (existing instanceof TFile) {
+            await this.updateCitationUsage(existing, sourceFile);
+            return 'updated';
+        }
+
+        const referenceMatch = group.matches.find(m => m.isReferenceSource === true);
+        if (!referenceMatch) return 'error';
+
+        const referenceText = referenceMatch.lineContent
+            .replace(/^\s*\[\^[a-z0-9]+\]:\s*/i, '')
+            .trim();
+        const urlMatch = referenceText.match(/https?:\/\/[^\s)]+/);
+        const url = urlMatch ? urlMatch[0] : undefined;
+
+        const file = await this.createCitationFile(hexId, referenceText, url, sourceFile);
+        return file ? 'saved' : 'error';
     }
 
     /**
