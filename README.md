@@ -1,50 +1,106 @@
 ![Cite Wide: An Obsidian Community Plugin by The Lossless Group](https://i.imgur.com/CJ18gyp.png)
 
-# Cite Wide Obsidian Plugin
+# Professional or Academic Grade Citations in Obsidian with the Cite Wide plugin
 
 An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into unique hex-codes, logs unique hex codes and their reference information into a base, assures consistent hex codes per reference.
 
+### Part of the Content Farm ecosystem of Plugins
+
+Cite Wide is part of a suite of plugins designed to help you build a robust, citation-aware knowledge base in Obsidian. Other plugins in the suite include:
+
+- **[Cite Wide](https://github.com/lossless-group/cite-wide)** - Vault-wide citation management
+- **[Image Gin](https://github.com/lossless-group/image-gin)** - Image generation and embedding for several Generative AI image generation services.
+- **[Perplexed](https://github.com/lossless-group/perplexed-plugin)** - Versatile prompt modal to query Perplexity AI or Perplexica, with additional API support in free form. Governs quality and consistency of AI responses.
+- **[Open Graph Fetcher](https://github.com/lossless-group/open-graph-fetcher)** - Reference management and citation tracking across your Obsidian vault.
+- **[Filestarter Kit](https://github.com/lossless-group/obsidian-plugin-starter)** - Clean, updated starter to clone with various common operations. Our favorite: YAML frontmatter templates and easy form inputs. Others: assemble table of contents, normalize whitespace.  Others are primarily there as examples of how to use the Obsidian API and build a plugin.
+
+[Content Farm](https://github.com/lossless-group/content-farm) is a loosely coupled monorepo, open source, and we operate an **[Open Project Board on GitHub](https://github.com/orgs/lossless-group/projects/2)** where you can request features, share ideas, track progress, and contribute. If you're not getting into the code, we recommend you install each plugin separately to avoid potential frustrations.
+
+Contributors welcome, just post to the board and we will get going.
+
+
 ## Features
+
+Obsidian (in reader mode) (and several other content tools) _reorder_ citations into perfect integer sequence based on their order of appearance. 
+- This opens the door to using unique variables within the citation delimiters, which can be used to enable greater functionality across not only the Obsidian vault, but many other content tools -- including publishing to the web.
+
+
+## Reference Management System, Inline, Reference Definition Section, and Vault-Wide Source Management
 
 ### 🔢 **Unique Hex Code Generation**
 - Converts numeric citations `[1]` into unique hex codes `[^a1b2c3]`
 - Consistent algorithm ensures the same reference always generates the same hex code
 - Maintains vault-wide consistency across all documents
 
-### 🌐 **Automatic URL Citation Extraction**
-- Extract properly formatted citations from URLs using Jina.ai Reader API
-- Highlights a URL and automatically generates citation in the format:
+### 📊 **Reference Tracking**
+- Logs unique hex codes and their reference information into an Obsidian base, which requires saving sources to a dedicated folder
+- Ensures consistent hex codes per reference, across all files in the vault.
+- Maintains vault-wide consistency across all documents
+
+### 🌐 **Automatic Property Extraction from URL**
+- Extract metadata from a link using a curl request, generating a response with more complete metadata.
+- Watch reference definations magically reformat and populate as the response is parsed.
+- If promoted to a vault-wide source, a reference file with complete metadata is created, accessible through Bases.
+   - formatted citations from URLs use Jina.ai Reader API
+- Highlights a URL and automatically generates citation in a preferred format. 
+  - Default is our perferred format:
   ```
   [^1b34df]: 2016, May. "[Originals, by Adam Grant | Bob's Books](https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/)" schoultz. [Bob's Books](https://bobsbeenreading.com/).
   ```
 - Updates existing footnotes or creates new ones
 - Works without API key, but adding one can avoid rate limits
 
-### 📚 **Citation Management**
-- Supports multiple citation formats: numeric `[1]`, footnotes `[^1]`, Perplexity-style `1. [https://...]`
-- Automatic detection and grouping of citation instances
-- Intelligent reference source tracking
 
-### 🤖 **LLM Output Citation Conversion** (v0.1.3)
-- Pastes from Google AI Overviews, Perplexity, and similar tools arrive in formats the rest of the plugin doesn't natively understand: comma-multi `[1, 2, 3]`, adjacent-multi `[1][2]`, and reference lists like `[2] [Title](url)` without the leading caret.
-- The **"Parse LLM Citations in Current File"** command opens a modal that detects every numeric reference in the current file, proposes a `[N] → [^hex]` mapping for each, and lets you preview every transformation before any disk write.
-- Per-row controls: checkbox to opt in/out, line-link anchors that scroll to each occurrence in the editor, plus a per-row **Convert** button that handles a single citation in place and re-renders the modal so you can keep working incrementally.
-- Header has a single tri-state **All** checkbox (browser-native indeterminate state when some-but-not-all are selected) and an **Apply** button for batch conversion.
-- Multi-form forms partially convert: if `[1, 2, 3]` has a ref def only for `[2]`, the output is `[1] [^xxx] [3]` — the orphan numerics survive untouched and get flagged.
+## Handle diverse LLM Output sytnax
+
+### 🤖 **LLM Output Transforms to Preferred Fromat** (v0.2.0)
+
+![Cite-Wide LLM Parsers create clean citations from diverse LLM output formats](https://i.imgur.com/Ssev447.png)
+
+**Two commands** for handling pasted research output from device-native LLM tools (Google AI, Perplexity AI, and similar). 
+Both share the same parser; 
+- one runs in-place on an existing file, 
+- one intercepts at paste-time before content lands in the file at all.
+
+**Recognized inline patterns:** comma-multi `[1, 2, 3]` (Google AI), adjacent-multi `[1][2]` (Perplexity), space-separated singles `[1] [2] [3]`, and word-or-punctuation-glued `text.[1]` / `changes[2]`.
+
+**Recognized reference-list patterns:** `[N] [Title](url)` (Google AI markdown link) and `[N] Title https://url` (Perplexity title-then-URL). Both are converted to the Lossless canonical `[^hex]: [Title](url)` markdown-link shape on the way out.
+
+**Spec conformance on output:** every converted line gets a final whitespace pass that ensures (a) one space between content and citation (after `.`, `,`, `:`, `;`, `!`, `?`, or any non-whitespace word boundary), and (b) one space between consecutive `[^hex] [^hex]` markers — per the Lossless inline-citation spec.
+
+#### Command: Parse LLM Citations in Current File
+
+![Cite-Wide LLM Parser Modal -- Parses file in focus by patterns of LLM Output](https://i.imgur.com/KWhSe1y.png)
+
+- Opens a modal listing every detected `[N]` numeric citation in the current file with its proposed `[^hex]` replacement, the reference-def text preview, and clickable line links to every inline occurrence.
+- Per-row controls: checkbox to opt in/out, per-row **Convert** button that handles a single citation in place and re-renders the modal so you can keep working incrementally, line-link anchors that scroll the editor.
+- Header: single tri-state **All** checkbox (browser-native indeterminate state when some-but-not-all are selected) and an **Apply** button for batch conversion.
+- Multi-form citations partially convert: if `[1, 2, 3]` has a ref def only for `[2]`, the output is `[1] [^xxx] [3]` — orphan numerics survive untouched and get flagged.
 - Already-`[^hex]` citations are preserved verbatim — mid-file human conversions never get re-touched.
 - Detects collisions (same numeric defined twice — likely two LLM-output sections pasted into one file) and refuses to corrupt them; surfaces orphans (cited inline but no ref def, and vice versa) as flags.
 
-### 🎨 **Smart Formatting**
-- Moves citations after punctuation (e.g., `text[1].` → `text.[1]`)
+#### Command: Paste LLM Content (Convert Citations on Insert)
+- Opens a modal with a big textarea + provider radio (Google AI Overviews / Perplexity) + Insert button. Paste your LLM output, click Insert, and the converted form lands at the cursor in one step.
+- Stops the colliding-numerics problem at its source instead of post-hoc — no risk that two pasted Perplexity responses with overlapping `[1]…[N]` series corrupt each other in the same file.
+- Collects the host document's hex namespace before generating new hex IDs, so the inserted citations never collide with `[^hex]` markers already in the file.
+
+
+## 🎨 **Smart Formatting**
+
+- Moves citations after punctuation (e.g., `text[1].` → `text. [1]`)
 - Ensures proper spacing between multiple citations
 - Maintains clean, readable document structure
 
-### 📊 **Dataview Integration**
-- Automatically creates citation files in a dedicated folder for Dataview queries
-- Rich metadata including title, author, URL, usage count, and file tracking
-- Comprehensive frontmatter for powerful Dataview queries and organization
 
-### Command: Convert to Hex Modal
+## 📊 **Bases Integration**
+- Automatically creates citation files in a dedicated folder for Dataview/Bases queries
+- Rich metadata including title, author, URL, usage count, and file tracking
+- Comprehensive frontmatter for powerful Dataview/Bases queries and organization
+
+
+## 🧩 **Commands**
+
+### Command: Convert Reference Pairings to Hex Modal
 
 ![Command: Convert to Hex](https://i.imgur.com/dBMKnV7.gif)
 
@@ -60,9 +116,7 @@ An Obsidian plugin for rigorous, vault-wide citation management. Converts numeri
 
 ![Command: Extract Citation from URL](https://i.imgur.com/J6JZLNK.png)
 
-### Command: Parse LLM Citations in Current File
-
-Opens a modal listing every detected `[N]` numeric citation with its proposed `[^hex]` replacement, the reference-def text, and clickable line links to every inline occurrence. Use the **All** checkbox to toggle every row, the per-row **Convert** button to handle a single citation in place, or **Apply** to batch-convert everything checked. See the v0.1.3 feature note above for the full behavior.
+***
 
 # Getting Started
 
@@ -79,7 +133,7 @@ Create a symbolic link into the plugins directory:
 
 Here is my example, but you will need to use your own path structure:
 ```bash
-ln -s /Users/mpstaton/code/lossless-monorepo/cite-wide /Users/mpstaton/content-md/lossless/.obsidian/plugins/cite-wide
+ln -s /Users/<username>/<your/preferred/path/to/cite-wide> /Users/<username>/<your-content-folder>/<your-vault-folder>/.obsidian/plugins/cite-wide
 ```
 
 ## Configuration

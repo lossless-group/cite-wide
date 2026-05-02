@@ -20,8 +20,10 @@ User-facing feature surface and screenshots: see `README.md`.
   declarations the original review flagged are gone; ESLint flat-config
   mirroring `ObsidianReviewBot` rules now gates `pnpm build`. Plugin is
   ready for re-submission but hasn't been pushed back yet.
-- Current version: **0.1.3** (LLM citation parser v1 + dedupe-by-URL +
-  the type-safety + dependency cleanup work, all shipped today).
+- Current version: **0.2.0** (LLM citation parser v1 — both
+  in-file modal and paste-time modal — plus dedupe-by-URL,
+  type-safety pass, and dependency cleanup, all shipped 2026-05-01
+  / 2026-05-02).
 - Active development happens on the `development` branch; `master` is the
   release/PR-target branch.
 - `manifest.json` and `versions.json` track the published Obsidian plugin
@@ -80,7 +82,8 @@ cite-wide/
 │   ├── modals/
 │   │   ├── CitationModal.ts                  "Show Citations" + Save buttons
 │   │   ├── DedupeByUrlModal.ts               URL-based dedupe confirmation
-│   │   └── LlmCitationsModal.ts              Per-row review of LLM citations
+│   │   ├── LlmCitationsModal.ts              Per-row review of LLM citations
+│   │   └── PasteLlmContentModal.ts           Paste-time LLM citation conversion
 │   ├── settings/
 │   │   └── CiteWideSettings.ts               Plugin settings tab
 │   └── utils/
