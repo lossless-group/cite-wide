@@ -25,6 +25,15 @@ An Obsidian plugin for rigorous, vault-wide citation management. Converts numeri
 - Automatic detection and grouping of citation instances
 - Intelligent reference source tracking
 
+### 🤖 **LLM Output Citation Conversion** (v0.1.3)
+- Pastes from Google AI Overviews, Perplexity, and similar tools arrive in formats the rest of the plugin doesn't natively understand: comma-multi `[1, 2, 3]`, adjacent-multi `[1][2]`, and reference lists like `[2] [Title](url)` without the leading caret.
+- The **"Parse LLM Citations in Current File"** command opens a modal that detects every numeric reference in the current file, proposes a `[N] → [^hex]` mapping for each, and lets you preview every transformation before any disk write.
+- Per-row controls: checkbox to opt in/out, line-link anchors that scroll to each occurrence in the editor, plus a per-row **Convert** button that handles a single citation in place and re-renders the modal so you can keep working incrementally.
+- Header has a single tri-state **All** checkbox (browser-native indeterminate state when some-but-not-all are selected) and an **Apply** button for batch conversion.
+- Multi-form forms partially convert: if `[1, 2, 3]` has a ref def only for `[2]`, the output is `[1] [^xxx] [3]` — the orphan numerics survive untouched and get flagged.
+- Already-`[^hex]` citations are preserved verbatim — mid-file human conversions never get re-touched.
+- Detects collisions (same numeric defined twice — likely two LLM-output sections pasted into one file) and refuses to corrupt them; surfaces orphans (cited inline but no ref def, and vice versa) as flags.
+
 ### 🎨 **Smart Formatting**
 - Moves citations after punctuation (e.g., `text[1].` → `text.[1]`)
 - Ensures proper spacing between multiple citations
@@ -50,6 +59,10 @@ An Obsidian plugin for rigorous, vault-wide citation management. Converts numeri
 ### Command: Extract Citation from URL
 
 ![Command: Extract Citation from URL](https://i.imgur.com/J6JZLNK.png)
+
+### Command: Parse LLM Citations in Current File
+
+Opens a modal listing every detected `[N]` numeric citation with its proposed `[^hex]` replacement, the reference-def text, and clickable line links to every inline occurrence. Use the **All** checkbox to toggle every row, the per-row **Convert** button to handle a single citation in place, or **Apply** to batch-convert everything checked. See the v0.1.3 feature note above for the full behavior.
 
 # Getting Started
 

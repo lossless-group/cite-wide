@@ -1,5 +1,82 @@
 
+# Troubleshooting Implementation
 
+```markdown
+[1, 2, 3] [^01xra2] [^i52jf3]
+```
+turned to
+
+```markdown
+[1] [^ozc1mc] [3] [^01xra2] [^i52jf3]
+```
+
+# Problem Statement
+
+In more files than we care to count, we have copy and pasted content from multiple sources with different citation formats. One after another. To make matters more complicated, in many of those multiple-citation-format files, we may have started but not worked through transforming citations to our standards.  (It's arduous, and takes sustained use of the `Cite Wide` plugin we are iterating on.)  The existing commands/scripts will likely leave gaps, or cause errors on these files because they cannot reason about the content and cannot perform on a selection within a file. To boot, Obsidian does not have a save system, so if we run a script that alters the whole file's set of citations, we may not be able to see it, much less undo it if we make a mistake. (We do use github on our content repository, but it's quite the hassle when trying to quickly move from relevant content identification, LLM response output, copy paste and move on.)
+
+
+# Existing Scripts likely won't work on a Messy File
+
+I am not sure exactly how it works, but when I run it feels like one fell swoop through the whole file.  That works when there are not multiple sections of the file with numeric citation/ref def collisions. I'm pretty sure it won't if there are. 
+
+ **citationService.convertAllCitations(content)** converts numeric singles + reference defs to hex. ✓
+  - The new dedup-by-URL command consolidates same-URL-different-hex collisions. ✓
+  - The two gaps for the script: (a) multi-citation inline expansion ([1, 2, 3] → three hex markers),
+   (b) Perplexity-style adjacent multi ([1][2] → [^a] [^b]).
+
+Challenge: The existing script cannot reason.  It has two modes: perform on text selection (Obsidian API) or perform on entire file (CLI).  It cannot perform on a selection within a file, nor can it analyze for potential issues across copy-pasted content from multiple sources.
+
+# An LLM Provider specific parser, possibly with AI Model oversight
+
+This LLM provider parser would be able to 
+
+1. identify clusters of citations -- ignoring duplicate numerics in another part of the section if it does not fit the pattern -- by identifying the pattern that indicates a cluster done by a specific LLM provider. 
+2. group those clusters and handle them independently.
+3. Ignore human improvements if they meet Lossless Standards, (could be a few citations that are already converted, in the middle of those that are not).
+4. Transform what can be transformed, and flag what cannot because it escapes patterns that the LLM provider uses.
+
+
+
+
+
+# Parse Analysis on One File
+
+ It's a mixed-format chaos file — six different citation patterns coexisting:
+
+  ┌───────────────────────────┬──────────────────────┬──────────────────────────────────────────┐
+  │          Pattern          │       Example        │          Existing code handles?          │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Already-hex inline        │ [^znfkr0]            │ ✓ (preserved)                            │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Already-hex reference def │ [^znfkr0]:           │ ✓                                        │
+  │                           │ [Title](url)         │                                          │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Numeric single inline     │ [12]                 │ ✓ via convertAllCitations                │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Numeric multi inline (the │ [1, 2, 3], [11, 13,  │ ✗ regex only matches [1]-like            │
+  │  LLM output style)        │ 14, 15]              │                                          │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Numeric reference def     │ [2] [Title](url)     │ partial — pattern matches but coexists   │
+  │ without caret             │                      │ with hex refs in same list               │
+  ├───────────────────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ Orphan refs / dangling    │ [^7b69gi] alone on   │ ✗                                        │
+  │ markers                   │ its own line         │                                          │
+  └───────────────────────────┴──────────────────────┴──────────────────────────────────────────┘
+
+  Plus URL-bound issues: same source cited with different titles in different LLM responses (one says
+   "AGIX Technologies", another shortens to "agixtech"); the dedup-by-URL command we just shipped
+  covers that.
+
+# Patterns from Major Providers
+
+ 1. Google AI — inline [1, 2, 3] (multi); reference list [1] [Title](url) plain bracket. Sometimes
+  hybrid [[1](url), [2](url)] form.
+  2. Perplexity — inline [1][2] adjacent (no comma, no space); reference list [1] Title https://url
+  (URL not always linkified).
+  /* Claude doesn't provide citations in Native App, need to see API responses for a later iteration */ 3. Claude — prose-style with bolded source names + attribution paragraphs; no bracket markers at all. (Need to use API with citations set to true, for another iteration. Here as placeholder)
+
+
+# Example Citations
 
 Example citations from Google AI Chat:
 
