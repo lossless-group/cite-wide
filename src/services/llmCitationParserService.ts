@@ -398,12 +398,23 @@ export class LlmCitationParserService {
     }
 
     /**
-     * Heuristic: a refdef line's body should start with a markdown link or a
-     * URL. Otherwise the line is probably ordinary prose with a leading `[N]`
-     * (e.g., a markdown footnote link reference within a sentence).
+     * Heuristic: a refdef line's body should contain a URL somewhere.
+     *
+     * Originally this only recognized two specific shapes: markdown link at
+     * line-start (`[Title](url)`, Google AI / Lossless style) and bare URL
+     * at line-start (Lossless `@URL` shorthand). That missed Perplexity's
+     * format entirely:
+     *
+     *     [1] Understanding GitHub Actions https://docs.github.com/articles/...
+     *
+     * Title text comes first, URL at the end. Loosening to "URL appears
+     * anywhere in the body" catches all three formats. The risk of a false
+     * positive — a body of pure prose containing an embedded URL — is real
+     * but low, because the line-anchored `[N]` prefix already filters out
+     * almost everything that isn't a reference definition.
      */
     private looksLikeRefDefBody(body: string): boolean {
-        return /^\[.+\]\(.+\)/.test(body) || /^https?:\/\//.test(body);
+        return /https?:\/\//.test(body);
     }
 
     private scanInline(line: string, lineNum: number): CitationToken[] {
