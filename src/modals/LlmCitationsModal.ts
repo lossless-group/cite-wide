@@ -75,32 +75,46 @@ export class LlmCitationsModal extends Modal {
         }
 
         const container = contentEl.createDiv('cite-wide-container');
+
+        // Tight header: title + inline button row, sitting flush atop the
+        // primary column. Override the wider `cite-wide-header` defaults to
+        // remove the heavy bottom border and the column-stacked button group.
         const header = container.createDiv('cite-wide-header');
+        header.style.marginBottom = '0.75rem';
+        header.style.paddingBottom = '0.5rem';
+        header.style.gap = '0.5rem';
 
         const selectedCount = [...this.selected.values()].filter(Boolean).length;
-        header.createEl('h2', {
+        const title = header.createEl('h2', {
             text: `Parse LLM Citations (${selectedCount} of ${this.rows.length} selected)`,
             cls: 'cite-wide-title',
         });
+        title.style.fontSize = '1.05rem';
+        title.style.fontWeight = '600';
+        title.style.margin = '0';
+        title.style.padding = '0';
+        title.style.borderBottom = 'none';
 
         const buttonContainer = header.createDiv('cite-wide-header-buttons');
+        buttonContainer.style.flexDirection = 'row';
+        buttonContainer.style.alignItems = 'center';
+        buttonContainer.style.gap = '0.35rem';
 
-        const selectAllBtn = buttonContainer.createEl('button', {
-            text: 'Select All',
-            cls: 'mod-cta cite-wide-convert-all-btn',
-        });
+        const compactBtn = (text: string, cls: string): HTMLButtonElement => {
+            const b = buttonContainer.createEl('button', { text, cls });
+            b.style.padding = '0.3rem 0.6rem';
+            b.style.fontSize = '0.78rem';
+            b.style.fontWeight = '500';
+            return b;
+        };
+
+        const selectAllBtn = compactBtn('Select All', 'cite-wide-convert-all-btn');
         selectAllBtn.addEventListener('click', () => this.setAllAndRerender(contentEl, true));
 
-        const unselectAllBtn = buttonContainer.createEl('button', {
-            text: 'Unselect All',
-            cls: 'cite-wide-convert-all-btn',
-        });
+        const unselectAllBtn = compactBtn('Unselect All', 'cite-wide-convert-all-btn');
         unselectAllBtn.addEventListener('click', () => this.setAllAndRerender(contentEl, false));
 
-        const applyBtn = buttonContainer.createEl('button', {
-            text: 'Apply',
-            cls: 'mod-cta cite-wide-save-all-hex-btn',
-        });
+        const applyBtn = compactBtn('Apply', 'mod-cta cite-wide-save-all-hex-btn');
         applyBtn.addEventListener('click', () => {
             void this.applySelected();
         });
@@ -127,43 +141,77 @@ export class LlmCitationsModal extends Modal {
 
     private renderRow(container: HTMLElement, row: RowData): void {
         const groupEl = container.createDiv('cite-wide-group');
+        groupEl.style.marginBottom = '0.5rem';
+        groupEl.style.borderRadius = '4px';
+        groupEl.style.boxShadow = 'none';
+
         const headerEl = groupEl.createDiv('cite-wide-group-header');
+        headerEl.style.padding = '0.4rem 0.6rem';
+        headerEl.style.cursor = 'default';
+
         const headerContent = headerEl.createDiv('cite-wide-group-header-content');
+        headerContent.style.gap = '0.5rem';
 
         const checkbox = headerContent.createEl('input', { type: 'checkbox' });
         checkbox.checked = this.selected.get(row.number) === true;
-        checkbox.style.marginRight = '0.5rem';
+        checkbox.style.marginRight = '0.25rem';
         checkbox.addEventListener('change', () => {
             this.selected.set(row.number, checkbox.checked);
         });
         checkbox.addEventListener('click', e => e.stopPropagation());
 
-        headerContent.createEl('h3', {
+        const titleEl = headerContent.createEl('span', {
             text: `[${row.number}] → [^${row.proposedHex}]`,
             cls: 'cite-wide-group-title',
         });
+        titleEl.style.fontSize = '0.9rem';
+        titleEl.style.fontWeight = '600';
+        titleEl.style.fontFamily = 'var(--font-monospace)';
 
         const inlineCount = row.inlineOccurrences.length;
-        headerContent.createEl('span', {
+        const subtitle = headerContent.createEl('span', {
             text: inlineCount === 0
                 ? '(orphan ref — no inline citation)'
                 : `${inlineCount} inline occurrence${inlineCount === 1 ? '' : 's'}`,
             cls: 'cite-wide-source-link',
         });
+        subtitle.style.fontSize = '0.78rem';
+        subtitle.style.opacity = '0.7';
+
+        // Per-row "Convert" button — converts just this numeric and re-renders.
+        const convertOneBtn = headerEl.createEl('button', { text: 'Convert' });
+        convertOneBtn.style.padding = '0.25rem 0.55rem';
+        convertOneBtn.style.fontSize = '0.75rem';
+        convertOneBtn.style.fontWeight = '500';
+        convertOneBtn.style.flexShrink = '0';
+        convertOneBtn.style.marginLeft = '0.5rem';
+        convertOneBtn.addClass('mod-cta');
+        convertOneBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            void this.applySingle(row.number);
+        });
 
         const content = groupEl.createDiv('cite-wide-group-content');
+        content.style.padding = '0.4rem 0.6rem';
         content.style.display = 'block';
 
         // Reference definition row
         const refRow = content.createDiv('cite-wide-instance cite-wide-reference-source');
+        refRow.style.padding = '0.3rem 0.5rem';
+        refRow.style.margin = '0';
+        refRow.style.borderRadius = '3px';
         const refInfo = refRow.createDiv('cite-wide-line-info');
-        refInfo.createEl('span', { text: 'Reference', cls: 'cite-wide-badge cite-wide-badge-reference' });
+        refInfo.style.fontSize = '0.78rem';
+        const refBadge = refInfo.createEl('span', { text: 'Reference', cls: 'cite-wide-badge cite-wide-badge-reference' });
+        refBadge.style.fontSize = '0.65rem';
+        refBadge.style.padding = '0.1em 0.4em';
         refInfo.createEl('span', { text: ' • ' });
         const refLink = refInfo.createEl('a', {
             text: `Line ${row.refDef.line}`,
             cls: 'cite-wide-line-number',
             href: '#',
         });
+        refLink.style.marginRight = '0.4rem';
         refLink.addEventListener('click', e => {
             e.preventDefault();
             this.scrollToLine(row.refDef.line);
@@ -176,21 +224,27 @@ export class LlmCitationsModal extends Modal {
         // Inline occurrence rows
         for (const occ of row.inlineOccurrences) {
             const occRow = content.createDiv('cite-wide-instance');
+            occRow.style.padding = '0.25rem 0';
+            occRow.style.margin = '0';
             const occInfo = occRow.createDiv('cite-wide-line-info');
+            occInfo.style.fontSize = '0.78rem';
             const kindLabel =
                 occ.kind === 'inline-numeric-multi-comma' ? 'multi'
                 : occ.kind === 'inline-numeric-multi-adjacent' ? 'adjacent'
                 : 'single';
-            occInfo.createEl('span', {
+            const occBadge = occInfo.createEl('span', {
                 text: `${kindLabel}: ${occ.raw}`,
                 cls: 'cite-wide-badge',
             });
+            occBadge.style.fontSize = '0.65rem';
+            occBadge.style.padding = '0.1em 0.4em';
             occInfo.createEl('span', { text: ' • ' });
             const occLink = occInfo.createEl('a', {
                 text: `Line ${occ.line}`,
                 cls: 'cite-wide-line-number',
                 href: '#',
             });
+            occLink.style.marginRight = '0.4rem';
             occLink.addEventListener('click', e => {
                 e.preventDefault();
                 this.scrollToLine(occ.line);
@@ -304,6 +358,44 @@ export class LlmCitationsModal extends Modal {
         );
         if (result.flags.length > 0) console.log('Cite Wide LLM citation flags:', result.flags);
         this.close();
+    }
+
+    /**
+     * Convert a single numeric and re-render the modal in place. Lets the
+     * user incrementally pick off conversions without bouncing back into
+     * the editor + reopening the command between each one.
+     */
+    private async applySingle(num: string): Promise<void> {
+        const hex = this.mapping.get(num);
+        if (!hex) {
+            new Notice(`No transformable mapping for [${num}].`);
+            return;
+        }
+
+        const result = llmCitationParserService.transform(this.content, this.parseResult, {
+            selectedNumbers: new Set([num]),
+            mapping: this.mapping,
+        });
+
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+            new Notice('No active file to write to.');
+            return;
+        }
+
+        await this.app.vault.modify(file, result.content);
+        new Notice(`Converted [${num}] → [^${hex}]`);
+
+        // Refresh state from the post-conversion content and re-render in
+        // place so the user can keep working through the list.
+        this.content = result.content;
+        this.parseResult = llmCitationParserService.parse(this.content);
+        this.mapping = llmCitationParserService.proposeHexMapping(this.parseResult);
+        this.rows = this.buildRows();
+        // Drop the converted number from the selection map so the count stays
+        // accurate; preserve other selections.
+        this.selected.delete(num);
+        this.renderInner(this.contentEl);
     }
 
     private scrollToLine(lineNumber: number): void {
