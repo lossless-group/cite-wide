@@ -76,13 +76,17 @@ export class LlmCitationsModal extends Modal {
 
         const container = contentEl.createDiv('cite-wide-container');
 
-        // Tight header: title + inline button row, sitting flush atop the
-        // primary column. Override the wider `cite-wide-header` defaults to
-        // remove the heavy bottom border and the column-stacked button group.
+        // Tight header: title on the left, "All" checkbox + Apply button on
+        // the right. Force row layout and nowrap so the controls never get
+        // pushed onto a second line by the parent's column-direction default.
         const header = container.createDiv('cite-wide-header');
+        header.style.display = 'flex';
+        header.style.flexDirection = 'row';
+        header.style.alignItems = 'center';
+        header.style.flexWrap = 'nowrap';
         header.style.marginBottom = '0.75rem';
         header.style.paddingBottom = '0.5rem';
-        header.style.gap = '0.5rem';
+        header.style.gap = '0.75rem';
 
         const selectedCount = [...this.selected.values()].filter(Boolean).length;
         const title = header.createEl('h2', {
@@ -94,27 +98,49 @@ export class LlmCitationsModal extends Modal {
         title.style.margin = '0';
         title.style.padding = '0';
         title.style.borderBottom = 'none';
+        title.style.flex = '1';
+        title.style.minWidth = '0';
 
-        const buttonContainer = header.createDiv('cite-wide-header-buttons');
-        buttonContainer.style.flexDirection = 'row';
-        buttonContainer.style.alignItems = 'center';
-        buttonContainer.style.gap = '0.35rem';
+        const controls = header.createDiv('cite-wide-header-buttons');
+        controls.style.display = 'flex';
+        controls.style.flexDirection = 'row';
+        controls.style.alignItems = 'center';
+        controls.style.gap = '0.6rem';
+        controls.style.flexShrink = '0';
+        controls.style.marginLeft = 'auto';
 
-        const compactBtn = (text: string, cls: string): HTMLButtonElement => {
-            const b = buttonContainer.createEl('button', { text, cls });
-            b.style.padding = '0.3rem 0.6rem';
-            b.style.fontSize = '0.78rem';
-            b.style.fontWeight = '500';
-            return b;
-        };
+        // "All" — single tri-state checkbox replacing Select-All/Unselect-All.
+        // Checked when every row is selected; indeterminate when some are;
+        // unchecked when none are. Clicking it forces all rows to the new
+        // state (browsers transition indeterminate → checked on click).
+        const allLabel = controls.createEl('label');
+        allLabel.style.display = 'flex';
+        allLabel.style.alignItems = 'center';
+        allLabel.style.gap = '0.3rem';
+        allLabel.style.fontSize = '0.85rem';
+        allLabel.style.fontWeight = '500';
+        allLabel.style.cursor = 'pointer';
+        allLabel.style.userSelect = 'none';
 
-        const selectAllBtn = compactBtn('Select All', 'cite-wide-convert-all-btn');
-        selectAllBtn.addEventListener('click', () => this.setAllAndRerender(contentEl, true));
+        const allCheckbox = allLabel.createEl('input', { type: 'checkbox' });
+        const allSelected = this.rows.every(r => this.selected.get(r.number) === true);
+        const anySelected = this.rows.some(r => this.selected.get(r.number) === true);
+        allCheckbox.checked = allSelected;
+        allCheckbox.indeterminate = !allSelected && anySelected;
+        allCheckbox.addEventListener('change', () => {
+            this.setAllAndRerender(contentEl, allCheckbox.checked);
+        });
 
-        const unselectAllBtn = compactBtn('Unselect All', 'cite-wide-convert-all-btn');
-        unselectAllBtn.addEventListener('click', () => this.setAllAndRerender(contentEl, false));
+        allLabel.createEl('span', { text: 'All' });
 
-        const applyBtn = compactBtn('Apply', 'mod-cta cite-wide-save-all-hex-btn');
+        const applyBtn = controls.createEl('button', {
+            text: 'Apply',
+            cls: 'mod-cta cite-wide-save-all-hex-btn',
+        });
+        applyBtn.style.padding = '0.3rem 0.7rem';
+        applyBtn.style.fontSize = '0.8rem';
+        applyBtn.style.fontWeight = '500';
+        applyBtn.style.flexShrink = '0';
         applyBtn.addEventListener('click', () => {
             void this.applySelected();
         });
