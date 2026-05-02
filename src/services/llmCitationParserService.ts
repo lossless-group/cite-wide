@@ -200,8 +200,16 @@ export class LlmCitationParserService {
      * Used by UI layers (the modal) to preview transformations before any
      * write happens. Excludes collision numbers; includes every numeric that
      * has a ref def and no collision.
+     *
+     * `additionalUsedHexes` lets a caller (e.g. the paste-LLM-content modal)
+     * exclude hex IDs that exist in some other context (the active document
+     * the pasted content will be inserted into) so generated hexes don't
+     * collide with citations already in that surrounding context.
      */
-    public proposeHexMapping(parseResult: ParseResult): Map<string, string> {
+    public proposeHexMapping(
+        parseResult: ParseResult,
+        additionalUsedHexes?: Set<string>
+    ): Map<string, string> {
         const collisionNumbers = new Set<string>();
         for (const flag of parseResult.flags) {
             if (flag.code === 'duplicate-numeric-ref' && flag.relatedNumber) {
@@ -210,6 +218,9 @@ export class LlmCitationParserService {
         }
         const numericToHex = new Map<string, string>();
         const usedHexes = new Set<string>(parseResult.hexRefs.keys());
+        if (additionalUsedHexes) {
+            for (const h of additionalUsedHexes) usedHexes.add(h);
+        }
         const sortedNums = [...parseResult.numericRefs.keys()]
             .filter(n => !collisionNumbers.has(n))
             .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));

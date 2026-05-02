@@ -7,6 +7,7 @@ import { formatLinksInSelection } from './src/services/linkSyntaxService';
 import { urlCitationService } from './src/services/urlCitationService';
 import { citationFileService, initializeCitationFileService, type CitationMetadata } from './src/services/citationFileService';
 import { LlmCitationsModal } from './src/modals/LlmCitationsModal';
+import { PasteLlmContentModal } from './src/modals/PasteLlmContentModal';
 import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
 
 export default class CiteWidePlugin extends Plugin {
@@ -106,6 +107,17 @@ export default class CiteWidePlugin extends Plugin {
             name: 'Parse LLM Citations in Current File',
             editorCallback: (editor: Editor) => {
                 new LlmCitationsModal(this.app, editor).open();
+            }
+        });
+
+        // Command to paste raw LLM output into a buffer, convert citations
+        // on-the-fly, and insert at the cursor — preventing the colliding-
+        // numerics problem at its source rather than fixing it post-hoc.
+        this.addCommand({
+            id: 'paste-llm-content',
+            name: 'Paste LLM Content (Convert Citations on Insert)',
+            editorCallback: (editor: Editor) => {
+                new PasteLlmContentModal(this.app, editor).open();
             }
         });
 
