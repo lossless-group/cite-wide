@@ -6,7 +6,7 @@ import { cleanReferencesSectionService } from './src/services/cleanReferencesSec
 import { formatLinksInSelection } from './src/services/linkSyntaxService';
 import { urlCitationService } from './src/services/urlCitationService';
 import { citationFileService, initializeCitationFileService, type CitationMetadata } from './src/services/citationFileService';
-import { llmCitationParserService } from './src/services/llmCitationParserService';
+import { LlmCitationsModal } from './src/modals/LlmCitationsModal';
 import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
 
 export default class CiteWidePlugin extends Plugin {
@@ -98,38 +98,14 @@ export default class CiteWidePlugin extends Plugin {
 
         // Command to convert LLM-tool citation outputs (Google AI's [1, 2, 3] form,
         // Perplexity's [1][2] adjacent form, plus their `[N] [Title](url)` reference
-        // definitions) into the Lossless hex format. Multi-form aware, preserves
-        // already-Lossless `[^hex]` citations, and surfaces orphans/collisions in
-        // the resulting Notice.
+        // definitions) into the Lossless hex format. Opens a modal so the user can
+        // preview every proposed [N] → [^hex] transformation, jump to line numbers
+        // via clickable links, and selectively opt in/out per-numeric.
         this.addCommand({
             id: 'parse-llm-citations',
             name: 'Parse LLM Citations in Current File',
-            editorCallback: async (editor: Editor) => {
-                try {
-                    const content = editor.getValue();
-                    const result = llmCitationParserService.parseAndTransform(content);
-                    if (result.stats.numericCitationsConverted === 0 && result.stats.refDefsConverted === 0) {
-                        new Notice(`No LLM-style citations to convert. ${result.stats.flagsRaised} flag(s) raised — see console for details.`);
-                        if (result.flags.length > 0) console.log('Cite Wide LLM citation flags:', result.flags);
-                        return;
-                    }
-                    const activeFile = this.app.workspace.getActiveFile();
-                    if (!activeFile) {
-                        new Notice('No active file to write to.');
-                        return;
-                    }
-                    await this.app.vault.modify(activeFile, result.content);
-                    const warnings = result.flags.filter(f => f.severity === 'warning').length;
-                    new Notice(
-                        `Converted ${result.stats.numericCitationsConverted} inline + ${result.stats.refDefsConverted} ref def(s). ` +
-                        `${result.stats.hexCitationsPreserved} hex citations preserved. ` +
-                        (warnings > 0 ? `${warnings} warning(s) — see console.` : 'No warnings.')
-                    );
-                    if (result.flags.length > 0) console.log('Cite Wide LLM citation flags:', result.flags);
-                } catch (error) {
-                    const errorMsg = error instanceof Error ? error.message : String(error);
-                    new Notice('Error parsing LLM citations: ' + errorMsg);
-                }
+            editorCallback: (editor: Editor) => {
+                new LlmCitationsModal(this.app, editor).open();
             }
         });
 

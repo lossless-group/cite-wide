@@ -195,32 +195,53 @@ export class LlmCitationParserService {
         return { tokens, numericRefs, hexRefs, inlineNumeric, inlineHex, flags };
     }
 
-    public transform(content: string, parseResult: ParseResult): TransformResult {
+    /**
+     * Pre-compute the numeric → hex mapping for every transformable numeric.
+     * Used by UI layers (the modal) to preview transformations before any
+     * write happens. Excludes collision numbers; includes every numeric that
+     * has a ref def and no collision.
+     */
+    public proposeHexMapping(parseResult: ParseResult): Map<string, string> {
         const collisionNumbers = new Set<string>();
         for (const flag of parseResult.flags) {
             if (flag.code === 'duplicate-numeric-ref' && flag.relatedNumber) {
                 collisionNumbers.add(flag.relatedNumber);
             }
         }
-
-        // Decide which numeric IDs are safely transformable: those with a unique
-        // ref def AND no collision flag. (Orphan inline numerics — no ref def at
-        // all — are NOT transformed; the inline stays numeric and gets flagged.)
-        const transformable = new Set<string>();
-        for (const [n] of parseResult.numericRefs) {
-            if (!collisionNumbers.has(n)) transformable.add(n);
-        }
-
-        // Generate one hex per transformable number, collision-checking against
-        // the existing hex-ref namespace so we never reuse a hex that's already
-        // bound to a different reference.
         const numericToHex = new Map<string, string>();
         const usedHexes = new Set<string>(parseResult.hexRefs.keys());
-        const sortedNums = [...transformable].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        const sortedNums = [...parseResult.numericRefs.keys()]
+            .filter(n => !collisionNumbers.has(n))
+            .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
         for (const n of sortedNums) {
             const hex = this.generateUniqueHex(usedHexes);
             usedHexes.add(hex);
             numericToHex.set(n, hex);
+        }
+        return numericToHex;
+    }
+
+    /**
+     * Transform the content. Optionally pass `selectedNumbers` to restrict
+     * which numerics actually get converted, and `mapping` to use a
+     * pre-computed numeric → hex mapping (so a UI preview shows the same
+     * hexes that get written). When mapping is omitted, fresh hexes are
+     * generated.
+     */
+    public transform(
+        content: string,
+        parseResult: ParseResult,
+        options?: { selectedNumbers?: Set<string>; mapping?: Map<string, string> }
+    ): TransformResult {
+        const mapping = options?.mapping ?? this.proposeHexMapping(parseResult);
+        const selectedNumbers = options?.selectedNumbers;
+
+        // Filter the mapping by selection (if any).
+        const numericToHex = new Map<string, string>();
+        for (const [n, h] of mapping) {
+            if (!selectedNumbers || selectedNumbers.has(n)) {
+                numericToHex.set(n, h);
+            }
         }
 
         let numericCitationsConverted = 0;
