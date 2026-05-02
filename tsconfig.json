@@ -1,0 +1,59 @@
+{
+  "compilerOptions": {
+    /* Base Options */
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    /* Strict Type-Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    /* Module Resolution */
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+
+    /* Emit */
+    "declaration": false,
+    "declarationMap": false,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "removeComments": true,
+    "noEmitOnError": true,
+    "noEmit": true,
+
+    /* Paths */
+    "paths": {
+      "*": ["node_modules/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}

@@ -1,0 +1,51 @@
+# Stack, Libraries, Dependencies
+
+#### Preliminaries
+- Do not assign blame, or expect the user to implement your plan or to fix your broken code. 
+- Do not ask the user to go check some file or directory that you can perfectly access faster and more accurately. Just find it.
+- Do not chop up a single task you've been asked to do to stop and ask if you should proceed. If the task is agreed upon, work through it. 
+- Read prompts thoroughly.  They have clear instructions.
+
+## THIS PROJECT IS DEVELOPED, EVERYTHING HAS A PLACE. 
+
+You will NEVER EVER EVER create files in locations that are not directly assigned.  If you want to create a file, you must ask where it should go if you cannot figure out where it should go.  BUT TRY TO FIGURE OUT WHERE IT SHOULD GO. DO NOT BE LAZY, LOOK FOR CODE AND FILES AND DIRECTORIES BEFORE CREATING NEW ONES.
+
+## THIS PROJECT IS DEVELOPED, EVERYTHING HAS A NAMING CONVENTION. 
+
+READ EVERY WORD OF EVERY PROMPT YOU ARE GIVEN. 
+
+IF THERE ARE MENTIONED FILES THAT HAVE RULES OR MAPS OR GUIDES OR CONSTRAINTS, READ THEM ALL CAREFULLY. 
+
+BE AWARE OF THE ENVIRONMENT YOU ARE WORKING IN. DO NOT INTRODUCE SYNTAX PATTERNS THAT ARE FAMILIAR TO YOU BUT NOT IN THE PROJECT.
+
+## CRITICAL LESSONS LEARNED
+
+1. DO NOT create random config files (like config.ts) in random places
+2. DO NOT modify env.d.ts or other TypeScript config files without explicit permission
+3. DO NOT add JSX or other frameworks/syntaxes that aren't part of our stack
+4. ALWAYS check Map-of-Relevant-Paths.md before creating ANY new file
+5. ALWAYS use existing patterns from content.config.ts for collection configuration
+6. NEVER try to "fix" things by creating more files - this only makes it worse
+7. NEVER try to immediately reverse or fix something you just got wrong. You will likely make it worse.  
+8. ALWAYS wait for explicit instructions after you make a mistake. 
+9. ONCE YOU HAVE BEEN GIVEN INSTRUCTIONS, YOU DO NOT NEED TO ASK POLITELY OVER AND OVER. GO DO WHAT WAS ASKED. 
+
+
+- THE USER HAS BUILT UP A COMPREHENSIVE SET OF DOCUMENTATION, PROMPTS, RULES, AND REMINDERS. ALWAYS SLOW DOWN, SLOW DOWM MORE, SLOW DOWN EVEN MORE.  NEVER RUSH THROUGH YOUR ASSIGNMENT. ALWAYS READ INSTRUCTIONS THOROUGHLY. THE USER OFTEN HAS STARTER FILES IN SPECIFIC LOCATIONS. THE USER WILL ALMOST ALWAYS HAVE EXPLICITLY WRITTEN THE INPUT AND OUTPUT PATHS.  SLOW DOWN AND USE THEM, EACH AND EVERY ONE. 
+
+- Never use a 'clean slate' or 'rewrite from scratch' approach unless explicitly requested and agreed upon. Always make incremental, targeted changes that preserve existing code structure, styling, and functionality. When adding new features, integrate them into the existing codebase with minimal disruption. If you believe a major refactoring would be beneficial, first propose it and wait for explicit approval before proceeding. 
+
+- Never change naming conventions in code.  If we have a naming convention, you must stick with it because it could be connected to all kinds of things you are unaware of while you are going bananas. 
+
+- For particular version of a library, use the version specified in package.json. 
+- Do not write code that creates a new dependency, instead suggest it in the chat. 
+- Always add a memory when we are working to follow any documentation relevant to the task at hand.  Don't make "assumptions" and just invent syntax.  
+
+## Project Setup
+- This project is an Obsidian plugin. 
+- Default to TypeScript. 
+- We are using Node.js
+- We are using pnpm for package management.
+- pnpm also runs the build, preview, dev, and other astro commands. 
+
+
