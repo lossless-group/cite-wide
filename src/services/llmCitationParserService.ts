@@ -268,6 +268,9 @@ export class LlmCitationParserService {
                 continue;
             }
             // Numeric ref defs: replace if transformable, otherwise preserve.
+            // When transforming, also restructure the body into the Lossless
+            // canonical shape (markdown-link-wrapped title) when it isn't
+            // already — handles Perplexity's `Title https://url` form.
             const numRefMatch = line.match(REFDEF_NUM_RE);
             if (numRefMatch && this.looksLikeRefDefBody(numRefMatch[4] ?? '')) {
                 const indent = numRefMatch[1] ?? '';
@@ -275,7 +278,7 @@ export class LlmCitationParserService {
                 const body = numRefMatch[4] ?? '';
                 const hex = numericToHex.get(num);
                 if (hex) {
-                    outLines.push(`${indent}[^${hex}]: ${body}`);
+                    outLines.push(`${indent}[^${hex}]: ${this.reformatRefDefBodyAsMarkdownLink(body)}`);
                     refDefsConverted++;
                 } else {
                     outLines.push(line);
@@ -346,6 +349,12 @@ export class LlmCitationParserService {
                 }
                 return match;
             });
+
+            // Final whitespace normalization: ensure a single space between
+            // closing punctuation and an inline `[^hex]`, and between any
+            // two adjacent `[^hex]` markers. Lossless spec requires this
+            // shape; LLM source outputs almost never include the spaces.
+            updated = this.normalizeInlineCitationSpacing(updated);
 
             outLines.push(updated);
         }
@@ -501,6 +510,54 @@ export class LlmCitationParserService {
             i++;
         }
         return out;
+    }
+
+    /**
+     * Insert a single space between any non-whitespace character and an
+     * inline `[^hex]` that follows it directly. Covers three Lossless-spec
+     * requirements at once:
+     *
+     *   - punctuation-then-cite (`text. [^hex]`)
+     *   - word-then-cite (`changes [^hex]`) — common in Perplexity source
+     *   - cite-then-cite (`[^a] [^b]`) — `]` is non-space too
+     *
+     * Iterates so chains like `text[^a][^b][^c]` resolve fully — each pass
+     * fixes one boundary, then the regex re-scans the modified string.
+     */
+    private normalizeInlineCitationSpacing(line: string): string {
+        let result = line;
+        const re = /(\S)(\[\^[a-z0-9]+\])/i;
+        let safety = 0;
+        while (re.test(result) && safety < 100) {
+            result = result.replace(re, '$1 $2');
+            safety++;
+        }
+        return result;
+    }
+
+    /**
+     * Reformat a reference-definition body into the Lossless markdown-link
+     * shape `[Title](URL)` when it isn't already. Catches Perplexity's
+     * common `Title https://url` form (title text first, URL at end).
+     *
+     * Skip when the body already contains any markdown link — preserves
+     * Lossless / Google-AI inputs that arrive correctly shaped, and avoids
+     * double-wrapping anything mid-line that's already a link.
+     */
+    private reformatRefDefBodyAsMarkdownLink(body: string): string {
+        if (/\[.+\]\(.+\)/.test(body)) return body;
+
+        const urlMatch = body.match(/https?:\/\/[^\s)]+/);
+        if (!urlMatch || urlMatch.index === undefined) return body;
+
+        const url = urlMatch[0];
+        const titleText = body.substring(0, urlMatch.index).trim();
+        const suffix = body.substring(urlMatch.index + url.length).trim();
+
+        if (!titleText) {
+            return suffix ? `[${url}](${url}) ${suffix}` : `[${url}](${url})`;
+        }
+        return suffix ? `[${titleText}](${url}) ${suffix}` : `[${titleText}](${url})`;
     }
 
     private generateUniqueHex(used: Set<string>): string {
