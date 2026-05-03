@@ -417,9 +417,9 @@ export class CitationService {
             });
             
             // Also handle citations that are already after punctuation but need spacing normalization
-            processedLine = processedLine.replace(/([.,])\s*((?:\[[^\]]+\])+)/g, (_, punctuation, citations) => {
+            processedLine = processedLine.replace(/([.,:;!?])\s*((?:\[\^[^\]]+\])+)/g, (_, punctuation, citations) => {
                 // Split multiple citations and ensure proper spacing
-                const citationMatches = citations.match(/\[[^\]]+\]/g) || [];
+                const citationMatches = citations.match(/\[\^[^\]]+\]/g) || [];
                 const spacedCitations = citationMatches.join(' ');
                 return `${punctuation} ${spacedCitations}`;
             });
@@ -439,7 +439,7 @@ export class CitationService {
             let processedLine = line.replace(/\](\s*)\[/g, '] [');
             
             // Then ensure there's a space after punctuation before citations
-            processedLine = processedLine.replace(/([.,])\s*(\[[^\]]+\])/g, '$1 $2');
+            processedLine = processedLine.replace(/([A-Za-z0-9.,:;!?])\s*(\[\^[^\]]+\])/g, '$1 $2');
             
             return processedLine;
         });

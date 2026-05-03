@@ -122,6 +122,8 @@ The `publisher_type` field is a controlled-but-not-enforced Train-Case taxonomy.
 
 The schema is grouped into logical sections below. **All fields are optional unless marked Required.** Empty strings and empty arrays are valid — leaving fields off is fine. The agent should not fabricate values to make a field present.
 
+> **Read the YAML block below as an illustrative *example*, not a per-citation requirement.** Different citation types populate different property sets — see the Source-Type → Field Applicability Matrix later in this document for the per-type expectations. A real canonical citation file will fill some sections and leave others entirely off; that is the intended shape, not an incomplete one. The block exists to enumerate every field name and document its purpose in one place, not to suggest every citation should carry every field.
+
 ```yaml
 # ─── Identity (Portability Spine pt. 1) ──────────────────────────────────
 internal_uuid: "{uuid-v4}"           # Required (always-include). Stable cross-system anchor. UUID v4. Must be unique across the entire knowledge base. Generation is deterministic; persistence is not negotiable.
@@ -171,6 +173,28 @@ cited_in_files:                      # Tracked automatically by the plugin; do n
 tags:                                # Train-Case. Categories, topics, dossier tags, project tags. Hierarchy resolved at consumer level.
   - "Tag-One"
   - "Tag-Two"
+
+# ─── Document-grounded citation fields ───────────────────────────────────
+# APPLICABILITY: only populate these when the source is an attached document
+# (PDF / plain-text / custom-content) cited via the Anthropic Citations API
+# or an equivalent. URL-based citations (web search results from any provider)
+# do NOT populate these fields. See Lossless-Citation-Spec.md →
+# "Document-Grounded Citations" for the markdown reference-def shape.
+# Currently a deferred / future-state concern — most citations will not have these.
+cited_excerpt: "The verbatim passage the model quoted from the document"
+                                     # The exact text returned in Anthropic's `cited_text` field.
+                                     # Insert verbatim — no length cap, no truncation.
+cited_location:                      # Position info inside the source document. Pick the shape that matches the source type.
+  type: "page"                       # one of: "page" | "char" | "block"
+  document_title: "Source Document"  # Display title of the cited document (mirrors `document_title` from the API).
+  document_path: "Citations/_attached/source.pdf"
+                                     # Local vault-relative path to the document. Default directory: Citations/_attached/
+  start_page: 12                     # page-only; 1-indexed inclusive (already converted from API exclusive end)
+  end_page: 13                       # page-only; 1-indexed inclusive
+  start_char: 1234                   # char-only; 0-indexed inclusive (preserves API convention)
+  end_char: 1456                     # char-only; 0-indexed exclusive (preserves API convention)
+  start_block: 0                     # block-only; 0-indexed inclusive (preserves API convention)
+  end_block: 1                       # block-only; 0-indexed exclusive (preserves API convention)
 ```
 
 > **AI agent note (output contract):** Emit exactly the field names above. Do not introduce new fields without updating this spec. Do not fabricate values; emit empty strings or omit fields when the source-of-truth lookup fails. The pipeline doc specifies which lookup paths to try and in what order.
@@ -226,33 +250,49 @@ For a citation to be considered **valid** (i.e. ingestible by downstream tooling
 
 A citation that lacks any of these is **incomplete** — usable in display contexts but not in the canonical archive. The acquisition pipeline (sibling doc) defines the agent's behavior when a minimum-viable threshold cannot be met.
 
-## Coexistence with the Current `CitationMetadata`
+## Relationship to the In-Code `CitationMetadata` Interface
 
-Today's `cite-wide` plugin defines a 12-field `CitationMetadata` interface in `src/services/citationFileService.ts`:
+The schema above is the **authoritative on-disk shape** for any citation promoted into the Citations folder. It is the reference for what canonical citations look like, what fields downstream consumers can rely on, and what shape the acquisition pipeline targets when it fills missing fields.
+
+The `cite-wide` plugin also defines an in-code TypeScript interface, `CitationMetadata`, in `src/services/citationFileService.ts`. That interface is **not a competing schema** — it is a simplified operational projection used while the plugin is reading, writing, and managing citation files in memory. The current shape:
 
 ```ts
 interface CitationMetadata {
     hexId: string;
     title: string | undefined;
-    author: string | undefined;            // singular; this schema makes it plural
-    url: string | undefined;               // == first_accessed_at_url (no drift tracking yet)
-    date: string | undefined;              // == date_published
-    source: string | undefined;            // == publisher
+    author: string | undefined;
+    url: string | undefined;
+    date: string | undefined;
+    source: string | undefined;
     tags: string[];
-    created: string;                       // == date_added
-    lastModified: string;                  // operational, not part of this schema
-    referenceText: string | undefined;     // operational, not part of this schema
-    usageCount: number;                    // operational
-    filesUsedIn: string[];                 // == cited_in_files
+    created: string;
+    lastModified: string;
+    referenceText: string | undefined;
+    usageCount: number;
+    filesUsedIn: string[];
 }
 ```
 
-**Coexistence model: opt-in upgrade.** Most pasted research stays in the current narrow shape — that's fine for ad-hoc use. Sources consciously promoted into the canonical archive get the full schema applied via the acquisition pipeline.
+This shape predates the full schema above and has not yet caught up. It is the gap between current implementation and current thinking — not an alternative tier the schema is meant to coexist with. Treat it as legacy-shaped; do not introduce new code that depends on its narrow shape.
 
-> **TODO (human + AI):** Decide on the migration path when the rich schema becomes the default. Options:
-> - **Big-bang**: replace `CitationMetadata` interface; backfill all existing `Citations/*.md` via the agent.
-> - **Dual-shape**: keep `CitationMetadata` as the "light" shape; introduce `CanonicalCitationMetadata` as the "rich" shape; both serialize to the same YAML, but tooling reads the level it expects. **Lower-risk path; recommended unless we hit a blocker.**
-> - **Opt-in only**: never auto-migrate; rich shape only appears on promoted sources. Old citations stay light forever.
+### Known gaps to close as the interface evolves
+
+The interface needs to grow toward the on-disk shape. Specific gaps:
+
+| In-code field | Replace / extend with | Notes |
+|---|---|---|
+| `author: string` | `authors: string[]` | Plural per the schema; even single-author sources go in an array. |
+| `url: string` | `first_accessed_at_url`, `recently_accessed_at_url` | Splits to capture URL drift. |
+| `date: string` | `date_published`, `date_added`, `date_recently_accessed` | The schema distinguishes three time concerns; the current single `date` collapses them. |
+| `source: string` | `publisher`, `publisher_url`, `publisher_type`, `publisher_favicon_url` | The "source" concept gets unpacked into a small object. |
+| (none) | `internal_uuid`, `default_slug`, `reference_hexcode` | Identity / spine fields not present today. |
+| (none) | `downloaded_content_path`, `structured_data_path` | Spine fields for portability not present today. |
+| (none) | `cited_excerpt`, `cited_location` | Document-grounded fields (deferred — see "Document-grounded citation fields" above). |
+| `created`, `lastModified`, `referenceText`, `usageCount`, `filesUsedIn` | (operational; keep) | Plugin-internal bookkeeping. `filesUsedIn` corresponds to `cited_in_files` in the schema; the rest are operational and don't appear in the on-disk YAML. |
+
+The evolution is incremental — each of these gaps can be closed in a separate change without breaking existing citation files (additive YAML reads back as missing fields, which the schema already permits).
+
+> **Note:** The earlier "Big-bang vs Dual-shape vs Opt-in" migration framing has been retired. The schema is the target; the in-code interface migrates toward it field-by-field as the plugin is touched. New code should use the schema's field names directly when reading or writing YAML frontmatter, even if the in-memory interface still uses the legacy shape elsewhere.
 
 ## Open Decisions (TODOs)
 
