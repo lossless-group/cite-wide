@@ -268,7 +268,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to format citations by moving them after punctuation and ensuring proper spacing
         this.addCommand({
             id: 'format-citations-punctuation',
-            name: 'Move Citations after Punctuation',
+            name: 'Assure Spacing for Anchor Link behavior',
             editorCallback: (editor: Editor) => {
                 // Process the entire document content
                 const content = editor.getValue();
