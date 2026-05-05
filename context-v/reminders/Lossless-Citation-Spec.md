@@ -1,3 +1,15 @@
+---
+title: "The Lossless Citation Open Specification"
+date_created: 2024-09-06
+date_modified: 2025-04-22
+publish: true
+authors:
+ - Michael Staton
+tags:
+ - Extended-Markdown
+ - Markdown-Citations
+ - Obsidian-Flavored-Markdown
+---
 
 # Always use the Lossless Citation Spec for Cite Wide.
 
