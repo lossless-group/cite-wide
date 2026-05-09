@@ -1,201 +1,343 @@
-/* cite-wide/src/styles/citations.css */
+/* cite-wide/src/styles/citations.css
+ *
+ * Width / sizing strategy: the .cite-wide-modal class is attached to the
+ * OUTER modalEl (not contentEl) so width rules actually take effect. See
+ * context-v reminder "Widen-Modals-in-Obsidian-using-CSS" in the perplexed
+ * sibling repo for the full rationale.
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Modal shell
+   ───────────────────────────────────────────────────────────────────────── */
 
 .cite-wide-modal {
-    padding: 1.5rem;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    margin: 0 auto;
+    width: 90vw;
+    max-width: 1100px;
+    max-height: 88vh;
 }
 
-.cite-wide-title {
-    margin-top: 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+.cite-wide-modal .modal-content {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(88vh - 60px);
+    overflow: hidden;
 }
 
-.cite-wide-container {
-    margin-top: 1rem;
-    width: 100%;
-    box-sizing: border-box;
-}
+/* ─────────────────────────────────────────────────────────────────────────
+   Header
+   ───────────────────────────────────────────────────────────────────────── */
 
 .cite-wide-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
+    padding: 1.25rem 1.5rem 1rem;
     border-bottom: 1px solid var(--background-modifier-border);
-    width: 100%;
+    background: var(--background-primary);
+}
+
+.cite-wide-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
 .cite-wide-title {
     margin: 0;
-    flex-shrink: 0;
-}
-
-.cite-wide-convert-all-btn {
-    white-space: nowrap;
-}
-
-.cite-wide-group {
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.cite-wide-group-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--background-secondary);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.cite-wide-group-header:hover {
-    background-color: var(--background-modifier-hover);
-}
-
-.cite-wide-group-header-content {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.cite-wide-group-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.cite-wide-source-link {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    text-decoration: none;
-}
-
-.cite-wide-group-content {
-    padding: 0.75rem 1rem;
-    background-color: var(--background-primary);
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-/* Base instance styling */
-.cite-wide-instance {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--background-modifier-border);
-}
-
-/* Reference source specific styling */
-.cite-wide-instance.cite-wide-reference-source {
-    background-color: var(--background-secondary-alt);
-    margin: 0 -1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 4px;
-    border: 1px solid var(--background-modifier-border);
-    border-left: 3px solid var(--interactive-accent);
-}
-
-.cite-wide-instance:last-child {
-    border-bottom: none;
-}
-
-.cite-wide-line-info {
-    flex: 1;
-    font-family: var(--font-monospace);
-    font-size: 0.9em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.cite-wide-line-number {
-    color: var(--text-muted);
-    margin-right: 0.5rem;
-}
-
-.cite-wide-line-preview {
-    opacity: 0.9;
-}
-
-/* Badge styling */
-.cite-wide-badge {
-    display: inline-block;
-    padding: 0.15em 0.5em;
-    font-size: 0.75em;
+    font-size: 1.35rem;
     font-weight: 600;
     line-height: 1.2;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.cite-wide-badge-reference {
     color: var(--text-normal);
-    background-color: var(--background-modifier-border);
 }
 
-/* Adjust line info spacing when badge is present */
-.cite-wide-line-info > .cite-wide-badge + span {
-    margin-left: 0.5rem;
+.cite-wide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
 }
 
-.cite-wide-instance-actions {
+.cite-wide-meta-pill {
+    font-size: 0.78rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    white-space: nowrap;
+}
+
+.cite-wide-meta-numeric {
+    color: var(--text-accent);
+    border-color: var(--interactive-accent);
+}
+
+.cite-wide-meta-hex {
+    color: var(--text-success, var(--text-normal));
+    border-color: var(--background-modifier-border-hover);
+}
+
+.cite-wide-header-actions {
     display: flex;
     gap: 0.5rem;
-    margin-left: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
-.cite-wide-convert-btn,
-.cite-wide-view-btn {
+.cite-wide-convert-all-btn,
+.cite-wide-save-all-hex-btn {
     white-space: nowrap;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.85em;
-    line-height: 1.4;
-    border-radius: 4px;
-    transition: all 0.1s ease;
 }
 
-.cite-wide-convert-btn {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border: 1px solid var(--interactive-accent-hover);
-    margin-left: 10rem;
+/* ─────────────────────────────────────────────────────────────────────────
+   Empty state
+   ───────────────────────────────────────────────────────────────────────── */
+
+.cite-wide-empty {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
 }
 
-.cite-wide-convert-btn:hover {
-    background-color: var(--interactive-accent-hover);
+.cite-wide-empty .cite-wide-title {
+    margin-bottom: 0.5rem;
 }
 
-.cite-wide-view-btn {
-    background-color: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
+.cite-wide-empty-message {
+    color: var(--text-muted);
+    margin: 0;
 }
 
-.cite-wide-view-btn:hover {
-    background-color: var(--background-modifier-hover);
+/* ─────────────────────────────────────────────────────────────────────────
+   Grid of citation cards
+   ───────────────────────────────────────────────────────────────────────── */
+
+.cite-wide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    align-content: start;
 }
 
-.cite-wide-footer {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--background-modifier-border);
+.cite-wide-card {
     display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-primary);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    position: relative;
+}
+
+.cite-wide-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    background: var(--interactive-accent);
+    opacity: 0.55;
+}
+
+.cite-wide-card-hex::before {
+    background: var(--text-success, var(--interactive-accent));
+}
+
+.cite-wide-card:hover {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cite-wide-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cite-wide-number-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    font-family: var(--font-monospace);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.cite-wide-card-meta {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    flex-wrap: wrap;
     justify-content: flex-end;
 }
 
-/* Ribbon Icon Styles */
+.cite-wide-meta-chip {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.cite-wide-format-chip {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.cite-wide-format-chip.is-numeric {
+    background: rgba(var(--interactive-accent-rgb, 110 84 250), 0.15);
+    color: var(--text-accent);
+}
+
+.cite-wide-format-chip.is-hex {
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.cite-wide-card-reference {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    border-left: 2px solid var(--background-modifier-border-hover);
+}
+
+.cite-wide-card-reference-text {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-normal);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.cite-wide-card-source-link {
+    font-size: 0.78rem;
+    font-family: var(--font-monospace);
+    color: var(--text-accent);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.cite-wide-card-source-link:hover {
+    text-decoration: underline;
+}
+
+.cite-wide-chips-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
+}
+
+.cite-wide-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.cite-wide-chip {
+    font-family: var(--font-monospace);
+    font-size: 0.78rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+}
+
+.cite-wide-chip:hover {
+    color: var(--text-on-accent);
+    background: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
+.cite-wide-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.cite-wide-card-primary-btn {
+    flex: 1 1 auto;
+    white-space: nowrap;
+}
+
+.cite-wide-card-secondary-btn {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.cite-wide-card-secondary-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Footer
+   ───────────────────────────────────────────────────────────────────────── */
+
+.cite-wide-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+}
+
+.cite-wide-close-btn {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.cite-wide-close-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Ribbon icon (unchanged from prior styling)
+   ───────────────────────────────────────────────────────────────────────── */
+
 .workspace-ribbon .side-dock-ribbon-action.cite-wide-ribbon-icon {
     color: var(--text-muted);
     transition: color 0.2s ease;
@@ -208,4 +350,21 @@
 
 .workspace-ribbon .side-dock-ribbon-action.cite-wide-ribbon-icon.is-active {
     color: var(--interactive-accent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Responsive: narrow window → single column, tighter padding
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+    .cite-wide-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+    .cite-wide-header {
+        padding: 1rem;
+    }
+    .cite-wide-footer {
+        padding: 0.75rem 1rem;
+    }
 }

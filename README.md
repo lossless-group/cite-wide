@@ -11,7 +11,7 @@ Cite Wide is part of a suite of plugins designed to help you build a robust, cit
 - **[Cite Wide](https://github.com/lossless-group/cite-wide)** - Vault-wide citation management
 - **[Image Gin](https://github.com/lossless-group/image-gin)** - Image generation and embedding for several Generative AI image generation services.
 - **[Perplexed](https://github.com/lossless-group/perplexed-plugin)** - Versatile prompt modal to query Perplexity AI or Perplexica, with additional API support in free form. Governs quality and consistency of AI responses.
-- **[Open Graph Fetcher](https://github.com/lossless-group/open-graph-fetcher)** - Reference management and citation tracking across your Obsidian vault.
+- **[Metafetch](https://github.com/lossless-group/metafetch)** - Reference management and citation tracking across your Obsidian vault.
 - **[Filestarter Kit](https://github.com/lossless-group/obsidian-plugin-starter)** - Clean, updated starter to clone with various common operations. Our favorite: YAML frontmatter templates and easy form inputs. Others: assemble table of contents, normalize whitespace.  Others are primarily there as examples of how to use the Obsidian API and build a plugin.
 
 [Content Farm](https://github.com/lossless-group/content-farm) is a loosely coupled monorepo, open source, and we operate an **[Open Project Board on GitHub](https://github.com/orgs/lossless-group/projects/2)** where you can request features, share ideas, track progress, and contribute. If you're not getting into the code, we recommend you install each plugin separately to avoid potential frustrations.
