@@ -378,8 +378,10 @@ export class LlmCitationsModal extends Modal {
 
         await this.app.vault.modify(file, result.content);
         const warnings = result.flags.filter(f => f.severity === 'warning').length;
+        const collapsed = result.stats.inlineRepetitionsCollapsed;
         new Notice(
             `Converted ${result.stats.numericCitationsConverted} inline + ${result.stats.refDefsConverted} ref def(s).` +
+            (collapsed > 0 ? ` Collapsed ${collapsed} repetition${collapsed === 1 ? '' : 's'}.` : '') +
             (warnings > 0 ? ` ${warnings} warning(s) — see console.` : '')
         );
         if (result.flags.length > 0) console.log('Cite Wide LLM citation flags:', result.flags);

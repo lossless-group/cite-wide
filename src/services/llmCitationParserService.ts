@@ -74,6 +74,7 @@ export interface TransformStats {
     refDefsConverted: number;
     hexCitationsPreserved: number;
     flagsRaised: number;
+    inlineRepetitionsCollapsed: number;
 }
 
 export interface TransformResult {
@@ -359,13 +360,26 @@ export class LlmCitationParserService {
             outLines.push(updated);
         }
 
+        // Collapse runs of the same hex marker repeated on the same line
+        // (e.g. `[^abc] [^abc] [^abc]`). LLM outputs frequently emit
+        // `[1, 1, 1]` or `[1][1][1]` which this transform expands to identical
+        // adjacent hex markers; without this pass they'd surface as visual
+        // noise in the user's prose.
+        const collapseRe = /(\[\^([a-z0-9]+)\])(?:[ \t]+\[\^\2\])+/g;
+        let inlineRepetitionsCollapsed = 0;
+        const finalContent = outLines.join('\n').replace(collapseRe, (_match, first: string) => {
+            inlineRepetitionsCollapsed++;
+            return first;
+        });
+
         return {
-            content: outLines.join('\n'),
+            content: finalContent,
             stats: {
                 numericCitationsConverted,
                 refDefsConverted,
                 hexCitationsPreserved,
                 flagsRaised: parseResult.flags.length,
+                inlineRepetitionsCollapsed,
             },
             flags: parseResult.flags,
             numericToHex,
