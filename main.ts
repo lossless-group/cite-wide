@@ -162,25 +162,6 @@ export default class CiteWidePlugin extends Plugin {
             }
         });
 
-        // Standalone dedupe of consecutive same-hex inline citations on the
-        // same line (e.g., `[^abc] [^abc] [^abc]` → `[^abc]`). Convert-All
-        // already runs this pass, but a dedicated command lets the user clean
-        // up files that were converted before this pass existed.
-        this.addCommand({
-            id: 'dedupe-inline-citation-repetitions',
-            name: 'Dedupe Inline Citation Repetitions',
-            editorCallback: (editor: Editor) => {
-                const content = editor.getValue();
-                const { content: next, collapsed } = citationService.collapseInlineRepeats(content);
-                if (collapsed > 0) {
-                    editor.setValue(next);
-                    new Notice(`Collapsed ${collapsed} inline repetition${collapsed === 1 ? '' : 's'}`);
-                } else {
-                    new Notice('No inline repetitions found');
-                }
-            }
-        });
-
         // Command to insert a new citation
         this.addCommand({
             id: 'insert-hex-citation',
@@ -536,18 +517,9 @@ export default class CiteWidePlugin extends Plugin {
             }
         }
 
-        // Always sweep for inline repetitions, even when nothing was converted —
-        // a document may already be hex-only but still contain `[^x] [^x] [^x]`
-        // runs from a prior LLM paste.
-        const dedupe = citationService.collapseInlineRepeats(updatedContent);
-        updatedContent = dedupe.content;
-
-        if (totalConverted > 0 || dedupe.collapsed > 0) {
+        if (totalConverted > 0) {
             editor.setValue(updatedContent);
-            const parts: string[] = [];
-            if (totalConverted > 0) parts.push(`converted ${totalConverted} citations to hex`);
-            if (dedupe.collapsed > 0) parts.push(`collapsed ${dedupe.collapsed} inline repetition${dedupe.collapsed === 1 ? '' : 's'}`);
-            new Notice(parts.join('; '));
+            new Notice(`Converted ${totalConverted} citations to hex format`);
         } else {
             new Notice('No citations were converted');
         }

@@ -455,27 +455,6 @@ export class CitationService {
     }
 
     /**
-     * Collapse runs of the same hex citation marker that repeat consecutively
-     * on the same line, separated only by horizontal whitespace.
-     *
-     * `[^abc] [^abc] [^abc]` → `[^abc]`. Distinct adjacent IDs and same-IDs
-     * separated by a newline are preserved (different paragraphs / list items
-     * may legitimately cite the same source).
-     */
-    public collapseInlineRepeats(content: string): { content: string; collapsed: number } {
-        let collapsed = 0;
-        // Backreference \2 ensures we only collapse when the SAME hex repeats.
-        // Horizontal-whitespace-only separator (no newlines) keeps the pass
-        // line-scoped; cross-paragraph repetition is left alone.
-        const re = /(\[\^([a-z0-9]+)\])(?:[ \t]+\[\^\2\])+/g;
-        const next = content.replace(re, (_match, first: string) => {
-            collapsed++;
-            return first;
-        });
-        return { content: next, collapsed };
-    }
-
-    /**
      * Convert a selected citation reference to hex format
      * Takes a reference line like "[1]: content" and converts it to "[^hexId]: content"
      */
