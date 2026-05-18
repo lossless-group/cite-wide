@@ -1,6 +1,6 @@
 {
 	"name": "cite-wide",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"main": "main.js",
 	"scripts": {
@@ -21,7 +21,6 @@
 		"@types/node": "^22.19.17",
 		"@typescript-eslint/eslint-plugin": "8.59.1",
 		"@typescript-eslint/parser": "8.59.1",
-		"builtin-modules": "5.1.0",
 		"esbuild": "0.28.0",
 		"eslint": "^9.28.0",
 		"obsidian": "latest",
