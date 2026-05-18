@@ -1,6 +1,6 @@
 {
 	"name": "cite-wide",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"main": "main.js",
 	"scripts": {

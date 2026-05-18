@@ -25,18 +25,15 @@ export class PasteLlmContentModal extends Modal {
     }
 
     onOpen(): void {
-        const { contentEl } = this;
+        const { contentEl, modalEl } = this;
         contentEl.empty();
 
-        const modalContainer = contentEl.closest('.modal-container');
-        const modalContent = contentEl.closest('.modal-content');
-        if (modalContainer instanceof HTMLElement && modalContent instanceof HTMLElement) {
-            modalContainer.style.width = '85vw';
-            modalContainer.style.maxWidth = 'none';
-            modalContent.style.width = '100%';
-            modalContent.style.maxWidth = 'none';
-        }
-        contentEl.addClass('cite-wide-modal');
+        // Attach styling class to the OUTER modal element so the width rules
+        // in citations.css (.cite-wide-modal { width: 90vw; max-width: 1100px })
+        // actually take effect. See context-v reminder
+        // "Widen-Modals-in-Obsidian-using-CSS" — width rules added to contentEl
+        // only resize the inner content area, not the popup itself.
+        modalEl.addClass('cite-wide-modal');
 
         const container = contentEl.createDiv('cite-wide-container');
 

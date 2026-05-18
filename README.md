@@ -2,7 +2,9 @@
 
 # Professional or Academic Grade Citations in Obsidian with the Cite Wide plugin
 
-An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into unique hex-codes, logs unique hex codes and their reference information into a base, assures consistent hex codes per reference.
+An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into stable hex identifiers that survive reorderings, logs each citation into a per-citation file for Bases/Dataview queries, dedupes citations that point at the same URL, and parses pasted research output from Perplexity / Google AI / Claude into the same canonical format on the way in.
+
+![Cite Wide demo — pasting an LLM research dump and watching every numeric citation convert to a stable hex marker on insert](https://ik.imagekit.io/xvpgfijuw/Image-Gin/2026-05/2026-05-17_Cite-Wide-_Paste-LLM_11.19.51_PM_HU9D8KUp-.webp)
 
 ### Part of the Content Farm ecosystem of Plugins
 
@@ -43,11 +45,11 @@ Obsidian (in reader mode) (and several other content tools) _reorder_ citations 
 
 ### 🌐 **Automatic Property Extraction from URL**
 - Extract metadata from a link using a curl request, generating a response with more complete metadata.
-- Watch reference definations magically reformat and populate as the response is parsed.
+- Watch reference definitions magically reformat and populate as the response is parsed.
 - If promoted to a vault-wide source, a reference file with complete metadata is created, accessible through Bases.
    - formatted citations from URLs use Jina.ai Reader API
 - Highlights a URL and automatically generates citation in a preferred format. 
-  - Default is our perferred format:
+  - Default is our preferred format:
   ```
   [^1b34df]: 2016, May. "[Originals, by Adam Grant | Bob's Books](https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/)" schoultz. [Bob's Books](https://bobsbeenreading.com/).
   ```
@@ -55,9 +57,9 @@ Obsidian (in reader mode) (and several other content tools) _reorder_ citations 
 - Works without API key, but adding one can avoid rate limits
 
 
-## Handle diverse LLM Output sytnax
+## Handle diverse LLM Output syntax
 
-### 🤖 **LLM Output Transforms to Preferred Fromat** (v0.2.0)
+### 🤖 **LLM Output Transforms to Preferred Format** (v0.2.0)
 
 ![Cite-Wide LLM Parsers create clean citations from diverse LLM output formats](https://i.imgur.com/Ssev447.png)
 
