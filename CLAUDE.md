@@ -31,9 +31,9 @@ User-facing feature surface and screenshots: see `README.md`.
 
 ## Type Safety — Read This First
 
-This is the load-bearing contract for the codebase. Full rules and patterns:
+This is the load-bearing contract for the codebase. Full rules and patterns live family-wide at:
 
-> **`context-v/reminders/Obsidian-Type-Safety.md`**
+> **`../../context-v/reminders/Obsidian-Type-Safety.md`** (in content-farm/context-v/reminders/, relocated there 2026-05-18 since the doctrine applies to every Lossless plugin, not just cite-wide)
 
 Headlines:
 
