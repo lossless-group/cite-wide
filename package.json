@@ -1,7 +1,7 @@
 {
 	"name": "cite-wide",
 	"version": "0.2.0",
-	"description": "This is an Obsidian plugin that enables rigorous citation and reference management (https://obsidian.md)",
+	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

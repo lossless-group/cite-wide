@@ -3,7 +3,7 @@
 	"name": "Cite Wide",
 	"version": "0.2.0",
 	"minAppVersion": "1.8.10",
-	"description": "A plugin for Obsidian that enables rigorous citation and reference management.",
+	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"author": "The Lossless Group",
 	"authorUrl": "https://lossless.group",
 	"fundingUrl": "https://lossless.group",
