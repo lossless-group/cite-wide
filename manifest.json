@@ -6,6 +6,6 @@
 	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"author": "The Lossless Group",
 	"authorUrl": "https://lossless.group",
-	"fundingUrl": "https://lossless.group",
+	"fundingUrl": "https://buymeacoffee.com/losslessgroup",
 	"isDesktopOnly": true
 }
