@@ -92,8 +92,8 @@ cite-wide/
 ├── scripts/
 │   └── parse-llm-citations.mjs               CLI test harness for the LLM parser
 ├── examples/                  Dataview query examples for users
+├── changelog/                 Per-day changelog entries (YYYY-MM-DD_NN.md) + releases/
 ├── context-v/                 Project context for AI/human collaborators
-│   ├── changelogs/            Per-day changelog entries (YYYY-MM-DD_NN.md)
 │   ├── blueprints/            Schema/feature spec docs (canonical citation system)
 │   ├── reminders/             Topic-specific source-of-truth docs
 │   └── workflow/              Day-of working notes; not authoritative
@@ -122,9 +122,7 @@ Reload Obsidian and enable in Community Plugins → Installed.
 
 ### Changelogs
 
-Per-day entries in `context-v/changelogs/` named `YYYY-MM-DD_NN.md`. Frontmatter
-schema mirrors `astro-knots/sites/calmstorm-decks/context-v/changelogs/`. See
-`context-v/changelogs/2026-05-01_01.md` for the canonical example.
+Per-day entries in `changelog/` named `YYYY-MM-DD_NN.md`; release narratives go under `changelog/releases/<version>.md`. Frontmatter schema mirrors `astro-knots/sites/calmstorm-decks/context-v/changelogs/` (sibling repo still uses the older nested location). See `changelog/2026-05-01_01.md` for the canonical per-day example and `changelog/releases/0.2.0.md` for the release-narrative pattern.
 
 Sections in order: **Why Care?** → **What Was Built / Updated** →
 *(optional)* **What Changed in Approach** → **Open Items** → **Files Touched** →
@@ -182,7 +180,7 @@ changelogs):
 - Treat YAML frontmatter coming back from Obsidian as `Record<string, unknown>`
   regardless of what `obsidian.d.ts` claims. Coerce per field.
 - Touching `package.json` or `pnpm-lock.yaml`? Add a changelog entry under
-  `context-v/changelogs/`. Dependency drift without a written record is what
+  `changelog/`. Dependency drift without a written record is what
   prompted this convention.
 - Touching `manifest.json` or `versions.json`? Use `pnpm version`; do not edit
   by hand.
