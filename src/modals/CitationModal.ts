@@ -16,76 +16,91 @@ export class CitationModal extends Modal {
     }
 
     async onOpen() {
-        const { contentEl } = this;
+        const { contentEl, modalEl } = this;
         contentEl.empty();
-        
-        // Make the modal wider
-        const modalContainer = contentEl.closest('.modal-container') as HTMLElement;
-        const modalContent = contentEl.closest('.modal-content') as HTMLElement;
-        
-        if (modalContainer && modalContent) {
-            // Set the modal container to be very wide
-            modalContainer.style.width = '95vw';
-            modalContainer.style.maxWidth = 'none';
-            
-            // Ensure the content takes full width
-            modalContent.style.width = '100%';
-            modalContent.style.maxWidth = 'none';
-        }
-        
-        contentEl.addClass('cite-wide-modal');
+
+        // Attach styling class to the OUTER modal element so width rules
+        // actually take effect (see context-v reminder
+        // "Widen-Modals-in-Obsidian-using-CSS").
+        modalEl.addClass('cite-wide-modal');
 
         // Extract all citation groups
         this.citationGroups = citationService.extractCitations(this.content);
 
         if (this.citationGroups.length === 0) {
-            contentEl.createEl('p', { 
-                text: 'No citations found in the current document.' 
+            const empty = contentEl.createDiv('cite-wide-empty');
+            empty.createEl('h2', { text: 'Citations in Document', cls: 'cite-wide-title' });
+            empty.createEl('p', {
+                text: 'No citations found in the current document.',
+                cls: 'cite-wide-empty-message',
             });
             return;
         }
 
-        // Create a container for citation groups
-        const container = contentEl.createDiv('cite-wide-container');
-        
-        // Create header with title and convert all button
-        const header = container.createDiv('cite-wide-header');
-        
-        // Add title on the left
-        header.createEl('h2', { 
-            text: 'Citations in Document',
-            cls: 'cite-wide-title'
-        });
-        
-        const numericCount = this.citationGroups.filter(g => !g.number.startsWith('hex_')).length;
-        const hexCount = this.citationGroups.filter(g => g.number.startsWith('hex_')).length;
+        const numericCount = this.citationGroups.filter((g) => !g.number.startsWith('hex_')).length;
+        const hexCount = this.citationGroups.filter((g) => g.number.startsWith('hex_')).length;
+        const totalInstances = this.citationGroups.reduce((sum, g) => sum + g.matches.length, 0);
 
-        // "Convert All" only when there are numeric citations to convert.
+        // Header: title, meta, primary actions
+        const header = contentEl.createDiv('cite-wide-header');
+
+        const titleBlock = header.createDiv('cite-wide-title-block');
+        titleBlock.createEl('h2', { text: 'Citations in Document', cls: 'cite-wide-title' });
+        const meta = titleBlock.createDiv('cite-wide-meta');
+        meta.createEl('span', {
+            text: `${this.citationGroups.length} ${this.citationGroups.length === 1 ? 'citation' : 'citations'}`,
+            cls: 'cite-wide-meta-pill',
+        });
+        meta.createEl('span', {
+            text: `${totalInstances} ${totalInstances === 1 ? 'instance' : 'instances'}`,
+            cls: 'cite-wide-meta-pill',
+        });
         if (numericCount > 0) {
-            const convertAllBtn = header.createEl('button', {
-                text: `Convert All (${numericCount})`,
-                cls: 'mod-cta cite-wide-convert-all-btn'
+            meta.createEl('span', {
+                text: `${numericCount} numeric`,
+                cls: 'cite-wide-meta-pill cite-wide-meta-numeric',
+            });
+        }
+        if (hexCount > 0) {
+            meta.createEl('span', {
+                text: `${hexCount} hex`,
+                cls: 'cite-wide-meta-pill cite-wide-meta-hex',
+            });
+        }
+
+        const actions = header.createDiv('cite-wide-header-actions');
+        if (numericCount > 0) {
+            const convertAllBtn = actions.createEl('button', {
+                text: `Convert All Numeric (${numericCount})`,
+                cls: 'mod-cta cite-wide-convert-all-btn',
             });
             convertAllBtn.addEventListener('click', () => {
                 void this.convertAllCitations();
             });
         }
-
-        // "Save All Hex" only when there are hex citations that could be canonicalized.
         if (hexCount > 0) {
-            const saveAllHexBtn = header.createEl('button', {
+            const saveAllHexBtn = actions.createEl('button', {
                 text: `Save All Hex (${hexCount})`,
-                cls: 'mod-cta cite-wide-save-all-hex-btn'
+                cls: 'mod-cta cite-wide-save-all-hex-btn',
             });
             saveAllHexBtn.addEventListener('click', () => {
                 void this.saveAllHexCitations();
             });
         }
 
-        // Add each citation group
+        // Body: responsive grid of citation cards
+        const grid = contentEl.createDiv('cite-wide-grid');
         for (const group of this.citationGroups) {
-            this.renderCitationGroup(container, group);
+            this.renderCitationGroup(grid, group);
         }
+
+        // Footer
+        const footer = contentEl.createDiv('cite-wide-footer');
+        const closeBtn = footer.createEl('button', {
+            text: 'Close',
+            cls: 'cite-wide-close-btn',
+        });
+        closeBtn.addEventListener('click', () => this.close());
     }
 
     private async saveAllHexCitations(): Promise<void> {
@@ -126,132 +141,118 @@ export class CitationModal extends Modal {
     }
 
     private renderCitationGroup(container: HTMLElement, group: CitationGroup) {
-        const groupEl = container.createDiv('cite-wide-group');
-        const header = groupEl.createDiv('cite-wide-group-header');
-        
-        // Create a collapsible header
-        const headerContent = header.createDiv('cite-wide-group-header-content');
-        // Display the original citation format instead of the internal group number
-        const displayNumber = group.number.startsWith('hex_') 
-            ? `^${group.number.replace('hex_', '')}` 
-            : group.number;
-            
-        headerContent.createEl('h3', { 
-            text: `Citation [${displayNumber}] (${group.matches.length} instances)`,
-            cls: 'cite-wide-group-title'
+        const isHex = group.number.startsWith('hex_');
+        const displayNumber = isHex ? `^${group.number.replace('hex_', '')}` : group.number;
+        const inlineMatches = group.matches.filter((m) => m.isReferenceSource !== true);
+        const referenceMatch = group.matches.find((m) => m.isReferenceSource === true);
+
+        const card = container.createDiv(`cite-wide-card ${isHex ? 'cite-wide-card-hex' : 'cite-wide-card-numeric'}`);
+
+        // Card header: number badge + counts + format kind
+        const cardHeader = card.createDiv('cite-wide-card-header');
+        const numberBadge = cardHeader.createDiv('cite-wide-number-badge');
+        numberBadge.createEl('span', { text: `[${displayNumber}]` });
+
+        const cardMeta = cardHeader.createDiv('cite-wide-card-meta');
+        cardMeta.createEl('span', {
+            text: `${inlineMatches.length} inline`,
+            cls: 'cite-wide-meta-chip',
+        });
+        cardMeta.createEl('span', {
+            text: isHex ? 'hex' : 'numeric',
+            cls: `cite-wide-format-chip ${isHex ? 'is-hex' : 'is-numeric'}`,
         });
 
-        if (group.url) {
-            headerContent.createEl('a', {
-                href: group.url,
-                text: 'Source',
-                cls: 'cite-wide-source-link',
-                attr: { target: '_blank' }
+        // Reference preview (if we know the reference line / URL)
+        const referenceText = group.referenceText?.trim() ?? referenceMatch?.lineContent.trim() ?? '';
+        if (referenceText || group.url) {
+            const refBlock = card.createDiv('cite-wide-card-reference');
+            if (referenceText) {
+                refBlock.createEl('div', {
+                    text: this.truncate(referenceText, 220),
+                    cls: 'cite-wide-card-reference-text',
+                });
+            }
+            if (group.url) {
+                refBlock.createEl('a', {
+                    href: group.url,
+                    text: this.shortenUrl(group.url),
+                    cls: 'cite-wide-card-source-link',
+                    attr: { target: '_blank', rel: 'noopener noreferrer' },
+                });
+            }
+        }
+
+        // Line-number chips: clicking jumps to the line
+        if (inlineMatches.length > 0) {
+            const chipsLabel = card.createDiv('cite-wide-chips-label');
+            chipsLabel.setText('Appears on lines');
+            const chips = card.createDiv('cite-wide-chips');
+            inlineMatches.forEach((match: CitationMatch) => {
+                const chip = chips.createEl('button', {
+                    text: `L${match.lineNumber}`,
+                    cls: 'cite-wide-chip',
+                    attr: { title: this.truncate(match.lineContent.trim(), 140) },
+                });
+                chip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.scrollToLine(match.lineNumber);
+                });
             });
         }
 
-        // Numeric citations get a "Convert to Hex" button; already-hex citations
-        // get "Save to Citations" (which canonicalizes the citation as a file in
-        // the Citations folder).
-        if (group.number.startsWith('hex_')) {
-            const saveBtn = header.createEl('button', {
+        // Card actions
+        const cardActions = card.createDiv('cite-wide-card-actions');
+        if (isHex) {
+            const saveBtn = cardActions.createEl('button', {
                 text: 'Save to Citations',
-                cls: 'mod-cta cite-wide-save-btn'
+                cls: 'mod-cta cite-wide-card-primary-btn',
             });
             saveBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 void this.saveSingleHexCitation(group);
             });
         } else {
-            const convertBtn = header.createEl('button', {
+            const convertBtn = cardActions.createEl('button', {
                 text: 'Convert to Hex',
-                cls: 'mod-cta cite-wide-convert-btn'
+                cls: 'mod-cta cite-wide-card-primary-btn',
             });
             convertBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 void this.convertCitationGroup(group);
             });
         }
-
-        // Create collapsible content
-        const content = groupEl.createDiv('cite-wide-group-content');
-        content.style.display = 'none'; // Start collapsed
-
-        // Toggle content on header click
-        header.addEventListener('click', () => {
-            content.style.display = content.style.display === 'none' ? 'block' : 'none';
-        });
-
-        // Add each citation instance
-        group.matches.forEach((match: CitationMatch, matchIndex: number) => {
-            const isRefSource = match.isReferenceSource === true;
-            const instanceEl = content.createDiv(`cite-wide-instance ${isRefSource ? 'cite-wide-reference-source' : ''}`);
-            
-            // Show line number and preview
-            const lineInfo = instanceEl.createDiv('cite-wide-line-info');
-            
-            // Add a special badge for reference sources
-            if (isRefSource) {
-                lineInfo.createEl('span', {
-                    text: 'Reference',
-                    cls: 'cite-wide-badge cite-wide-badge-reference'
-                });
-                lineInfo.createEl('span', { text: ' • ' });
-            }
-            
-            lineInfo.createEl('span', { 
-                text: `Line ${match.lineNumber}: `,
-                cls: 'cite-wide-line-number'
+        if (inlineMatches.length > 0 && inlineMatches[0]) {
+            const firstMatch = inlineMatches[0];
+            const jumpBtn = cardActions.createEl('button', {
+                text: 'Jump to first',
+                cls: 'cite-wide-card-secondary-btn',
             });
-
-            // Create a preview of the line content
-            const preview = match.lineContent.trim();
-            const previewText = preview.length > 100 
-                ? `${preview.substring(0, 100)}...` 
-                : preview;
-                
-            lineInfo.createEl('span', {
-                text: previewText,
-                cls: 'cite-wide-line-preview'
+            jumpBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.scrollToLine(firstMatch.lineNumber);
             });
+        }
+    }
 
-            // Add view and convert buttons
-            const btnContainer = instanceEl.createDiv('cite-wide-instance-actions');
-            
-            // Only add view/convert buttons for non-reference entries
-            if (!isRefSource) {
-                const viewBtn = btnContainer.createEl('button', {
-                    text: 'View',
-                    cls: 'mod-cta-outline cite-wide-view-btn'
-                });
+    private truncate(text: string, max: number): string {
+        if (text.length <= max) return text;
+        return `${text.substring(0, max - 1).trimEnd()}…`;
+    }
 
-                viewBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.scrollToLine(match.lineNumber);
-                });
-            }
-
-            // Only add convert button for non-reference entries
-            if (!isRefSource) {
-                const convertBtn = btnContainer.createEl('button', {
-                    text: 'Convert',
-                    cls: 'mod-cta cite-wide-convert-btn'
-                });
-
-                convertBtn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await this.convertCitationInstance(group, matchIndex);
-                });
-            }
-        });
+    private shortenUrl(url: string): string {
+        try {
+            const u = new URL(url);
+            const path = u.pathname.length > 30 ? `${u.pathname.substring(0, 29)}…` : u.pathname;
+            return `${u.hostname}${path}`;
+        } catch {
+            return this.truncate(url, 60);
+        }
     }
 
     private async convertCitationGroup(group: CitationGroup) {
         try {
-            const result = citationService.convertCitation(
-                this.content,
-                group.number
-            );
+            const result = citationService.convertCitation(this.content, group.number);
 
             if (result.changed) {
                 await this.saveChanges(result.content);
@@ -266,47 +267,13 @@ export class CitationModal extends Modal {
         }
     }
 
-    private async convertCitationInstance(group: CitationGroup, _matchIndex: number) {
-        try {
-            // Use the same approach as convertCitationGroup to ensure footnote conversion
-            const result = citationService.convertCitation(
-                this.content,
-                group.number
-            );
-
-            if (result.changed) {
-                await this.saveChanges(result.content);
-                
-                // Update the content for future operations
-                this.content = result.content;
-                
-                // Display the original citation format in the notice
-                const displayNumber = group.number.startsWith('hex_') 
-                    ? `^${group.number.replace('hex_', '')}` 
-                    : group.number;
-                    
-                new Notice(`Converted citation [${displayNumber}] to hex format`);
-                this.close();
-            } else {
-                new Notice('No changes were made to the document');
-            }
-        } catch (error) {
-            console.error('Error converting citation instance:', error);
-            new Notice('Error converting citation. See console for details.');
-        }
-    }
-
     private async convertAllCitations() {
         try {
             let updatedContent = this.content;
             let totalConverted = 0;
 
-            // Process each group
             for (const group of this.citationGroups) {
-                const result = citationService.convertCitation(
-                    updatedContent,
-                    group.number
-                );
+                const result = citationService.convertCitation(updatedContent, group.number);
 
                 if (result.changed) {
                     updatedContent = result.content;
@@ -338,64 +305,47 @@ export class CitationModal extends Modal {
 
     private scrollToLine(lineNumber: number) {
         try {
-            // Get the line content
             const lineContent = this.editor.getLine(lineNumber);
-            
-            // Find the citation pattern in the line (matches [1], [2], etc.)
             const citationMatch = lineContent.match(/\[(\d+)\]/);
-            
+
             if (citationMatch) {
                 const citationText = citationMatch[0];
                 const startPos = citationMatch.index || 0;
                 const endPos = startPos + citationText.length;
-                
-                // Create positions for the citation
+
                 const from = { line: lineNumber, ch: startPos };
                 const to = { line: lineNumber, ch: endPos };
-                
-                // Set cursor to the start of the citation and select it
+
                 this.editor.setCursor(from);
                 this.editor.setSelection(from, to);
-                
-                // Scroll to make the citation visible with some context
+
                 const fromLine = Math.max(0, lineNumber - 2);
                 const toLine = lineNumber + 2;
-                
-                // Create a range for the context area
+
                 const contextRange = {
                     from: { line: fromLine, ch: 0 },
-                    to: { line: toLine, ch: 0 }
+                    to: { line: toLine, ch: 0 },
                 };
-                
-                // Scroll to show the context area
+
                 this.editor.scrollIntoView(contextRange, true);
-                
-                // Then scroll to show the selection
                 this.editor.scrollIntoView({ from, to }, true);
-                
-                // Focus the editor to show the selection
                 this.editor.focus();
-                
             } else {
-                // Fallback to just scrolling to the line if no citation pattern is found
                 const pos = { line: lineNumber, ch: 0 };
                 this.editor.setCursor(pos);
-                
-                // Create a range for the context area
+
                 const contextRange = {
                     from: { line: Math.max(0, lineNumber - 2), ch: 0 },
-                    to: { line: lineNumber + 2, ch: 0 }
+                    to: { line: lineNumber + 2, ch: 0 },
                 };
-                
+
                 this.editor.scrollIntoView(contextRange, true);
                 this.editor.focus();
             }
-            
-            // Close the modal after a short delay to ensure the selection is visible
+
             setTimeout(() => {
                 this.close();
             }, 100);
-            
         } catch (error) {
             console.error('Error scrolling to line:', error);
             this.close();
@@ -403,7 +353,8 @@ export class CitationModal extends Modal {
     }
 
     onClose() {
-        const { contentEl } = this;
+        const { contentEl, modalEl } = this;
+        modalEl.removeClass('cite-wide-modal');
         contentEl.empty();
     }
 }
