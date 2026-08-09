@@ -1,3 +1,5 @@
+import { assureSpaceBeforeInlineCitationsInDocument } from '../utils/citationSpacing';
+
 export interface ConversionResult {
     content: string;
     changed: boolean;
@@ -432,19 +434,11 @@ export class CitationService {
      * Ensures proper spacing between citations
      */
     public assureSpacingBetweenCitations(content: string): string {
-        // Process line by line to avoid affecting line breaks
-        const lines = content.split('\n');
-        const processedLines = lines.map(line => {
-            // Ensure exactly one space between multiple citations on the same line
-            let processedLine = line.replace(/\](\s*)\[/g, '] [');
-            
-            // Then ensure there's a space after punctuation before citations
-            processedLine = processedLine.replace(/([A-Za-z0-9.,:;!?])\s*(\[\^[^\]]+\])/g, '$1 $2');
-            
-            return processedLine;
-        });
-        
-        return processedLines.join('\n');
+        // Delegates to the shared spacing util so this and the LLM parser
+        // can't drift apart again — the two had separate implementations and
+        // only the parser's handled quotes, parens, dashes, and non-ASCII
+        // letters correctly (lossless-group/cite-wide#23).
+        return assureSpaceBeforeInlineCitationsInDocument(content);
     }
 
     /**

@@ -27,6 +27,8 @@
  * a CLI harness without spinning up the plugin host.
  */
 
+import { assureSpaceBeforeInlineCitations } from '../utils/citationSpacing';
+
 export type TokenKind =
     | 'inline-numeric-single'        // [12]
     | 'inline-numeric-multi-comma'   // [1, 2, 3] — Google AI
@@ -521,18 +523,12 @@ export class LlmCitationParserService {
      *   - word-then-cite (`changes [^hex]`) — common in Perplexity source
      *   - cite-then-cite (`[^a] [^b]`) — `]` is non-space too
      *
-     * Iterates so chains like `text[^a][^b][^c]` resolve fully — each pass
-     * fixes one boundary, then the regex re-scans the modified string.
+     * Shared with `citationService.assureSpacingBetweenCitations` so the two
+     * can't drift; see `utils/citationSpacing.ts` for why the rule is a
+     * lookahead rather than a character class.
      */
     private normalizeInlineCitationSpacing(line: string): string {
-        let result = line;
-        const re = /(\S)(\[\^[a-z0-9]+\])/i;
-        let safety = 0;
-        while (re.test(result) && safety < 100) {
-            result = result.replace(re, '$1 $2');
-            safety++;
-        }
-        return result;
+        return assureSpaceBeforeInlineCitations(line);
     }
 
     /**

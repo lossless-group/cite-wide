@@ -1,6 +1,7 @@
 // cite-wide/src/services/urlCitationService.ts
 
 import { asString, isRecord } from '../utils/coerce';
+import { formatCitationDate } from '../utils/citationDate';
 
 export interface CitationData {
     title: string;
@@ -131,10 +132,8 @@ export class UrlCitationService {
                 || (meta && (asString(meta['article:published_time']) || asString(meta['og:article:published_time'])))
                 || undefined;
             if (publishedTime) {
-                const dateObj = new Date(publishedTime);
-                if (!Number.isNaN(dateObj.getTime())) {
-                    date = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-                } else {
+                date = formatCitationDate(publishedTime);
+                if (!date) {
                     console.warn('Could not parse published time:', publishedTime);
                 }
             }

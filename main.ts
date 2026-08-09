@@ -1,5 +1,6 @@
 import { App, Notice, Plugin, Editor, Modal, ButtonComponent, TFile } from 'obsidian';
 import { citationService } from './src/services/citationService';
+import { tableCitationService } from './src/services/tableCitationService';
 import { CitationModal } from './src/modals/CitationModal';
 import { DedupeByUrlModal } from './src/modals/DedupeByUrlModal';
 import { cleanReferencesSectionService } from './src/services/cleanReferencesSectionService';
@@ -284,6 +285,36 @@ export default class CiteWidePlugin extends Plugin {
                 } else {
                     new Notice('No citations needed formatting');
                 }
+            }
+        });
+
+        // Obsidian won't render a footnote marker inside a table cell, so
+        // citations written into tables are inert. This lifts them out into a
+        // "Sources for Table:" line beneath each table. Idempotent — safe to
+        // run repeatedly on the same document.
+        this.addCommand({
+            id: 'lift-table-citations',
+            name: 'Lift Table Citations Below Table',
+            editorCallback: (editor: Editor) => {
+                const content = editor.getValue();
+                const result = tableCitationService.liftTableCitations(content);
+
+                if (!result.changed) {
+                    new Notice(
+                        result.stats.tablesFound === 0
+                            ? 'No tables found in this document'
+                            : 'No table citations needed lifting'
+                    );
+                    return;
+                }
+
+                editor.setValue(result.content);
+                const { citationsLifted, tablesModified, uniqueSourcesEmitted } = result.stats;
+                new Notice(
+                    `Lifted ${citationsLifted} citation${citationsLifted === 1 ? '' : 's'} ` +
+                    `from ${tablesModified} table${tablesModified === 1 ? '' : 's'} ` +
+                    `(${uniqueSourcesEmitted} unique)`
+                );
             }
         });
     }
