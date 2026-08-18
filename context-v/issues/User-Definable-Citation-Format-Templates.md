@@ -23,6 +23,10 @@ tags:
   - Citation-Templates
   - Obsidian-Plugin-Settings
   - Extensibility
+site_uuid: 3d22b1f3-0650-427c-aea8-c1c907d18035
+hex_code: qnf5g6
+date_authored_initial_draft: 2026-08-08
+date_authored_current_draft: 2026-08-08
 ---
 
 # Users need to define their own citation format

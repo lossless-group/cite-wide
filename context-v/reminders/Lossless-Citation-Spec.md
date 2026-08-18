@@ -9,6 +9,10 @@ tags:
  - Extended-Markdown
  - Markdown-Citations
  - Obsidian-Flavored-Markdown
+site_uuid: b706d1c2-9a7d-4042-9ac3-bda864e91277
+hex_code: 5voo72
+date_authored_initial_draft: 2024-09-06
+date_authored_current_draft: 2024-09-06
 ---
 
 # Always use the Lossless Citation Spec for Cite Wide.

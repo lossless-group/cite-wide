@@ -18,6 +18,8 @@ tags:
 sibling_docs:
   - "Citation-Acquisition-Pipeline.md"
   - "Citation-Field-Acquisition-Guide.md"
+site_uuid: 51c34d70-443b-4564-9bbd-d291b1b4e5ec
+hex_code: i97f8x
 ---
 
 > **How to read this doc.** Sections are grouped by audience: the **WHY** sections (Thesis, Portability Spine) are mandatory context for anyone — human or AI agent — touching the schema. The **WHAT** sections (Schema, Source-Type Matrix, Audiences) are the actual specification. The **HOW** is deferred to the two sibling docs.

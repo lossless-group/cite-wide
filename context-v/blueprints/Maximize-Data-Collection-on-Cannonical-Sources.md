@@ -1,3 +1,16 @@
+---
+site_uuid: 4cc3cd7c-2937-482c-b5f9-593b35f30b34
+hex_code: tvt2jo
+title: Maximize Data Collection on Cannonical Sources
+date_created: 2026-05-01
+date_authored_initial_draft: 2026-05-01
+date_authored_current_draft: 2026-05-01
+authors:
+  - Michael Staton
+at_semantic_version: 0.0.1.0
+tags:
+  - Blueprint
+---
 
 # Context
 

@@ -1,3 +1,16 @@
+---
+site_uuid: 152ca702-e559-476c-8491-eb705d2edb7e
+hex_code: vi1wde
+title: Parse Common Citation Formats
+date_created: 2026-05-01
+date_authored_initial_draft: 2026-05-01
+date_authored_current_draft: 2026-05-01
+authors:
+  - Michael Staton
+at_semantic_version: 0.0.1.0
+tags:
+  - Blueprint
+---
 
 # Troubleshooting Implementation
 

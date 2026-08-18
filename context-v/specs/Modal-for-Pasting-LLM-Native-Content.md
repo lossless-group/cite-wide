@@ -1,3 +1,16 @@
+---
+site_uuid: 384f0395-77d7-4a01-975a-e5633b65abee
+hex_code: l9ew0v
+title: Modal for Pasting LLM Native Content
+date_created: 2026-05-01
+date_authored_initial_draft: 2026-05-01
+date_authored_current_draft: 2026-05-01
+authors:
+  - Michael Staton
+at_semantic_version: 0.0.1.0
+tags:
+  - Spec
+---
 
 
 # Goal:
