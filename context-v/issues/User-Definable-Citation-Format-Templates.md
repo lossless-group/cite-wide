@@ -1,6 +1,7 @@
 ---
 title: "Users need to define their own citation format — the Lossless house style is hardcoded"
-lede: "Cite Wide bakes one person's citation convention into string concatenation across four services. Every other Obsidian user wants APA, MLA, Chicago, IEEE, or their own house style. Templating is the feature; centralizing the format is the prerequisite."
+lede: >-
+  Cite Wide hardcodes one house style across four services. Templating is the feature; centralizing the format is the prerequisite.
 date_created: 2026-08-08
 date_modified: 2026-08-08
 authors:

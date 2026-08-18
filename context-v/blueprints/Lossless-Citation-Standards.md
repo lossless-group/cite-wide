@@ -1,6 +1,7 @@
 ---
 title: "Lossless Citation Standards — Schema, Audiences, Portability Thesis"
-lede: "The schema layer of the Lossless citation system: what fields exist, why each exists, which audiences and source types each serves, and how the schema is designed to outlive any one rendering target. This is the WHAT and WHY. For HOW the schema gets filled, see Citation-Acquisition-Pipeline.md and Citation-Field-Acquisition-Guide.md."
+lede: >-
+  The schema layer: what fields exist, why each exists, and how they outlive any one rendering target. The WHAT and WHY, not the HOW.
 date_authored_initial_draft: 2026-05-01
 date_authored_current_draft: 2026-05-01
 status: Draft

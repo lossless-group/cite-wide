@@ -1,6 +1,7 @@
 ---
 title: "Paste LLM Content drops prose structure and emits link-only citations"
-lede: "The paste-time pipeline rewrites citation tokens and nothing else. Google AI Overview headings and bullets survive as flat prose, bare-URL reference definitions become self-referential markdown links missing every field the Lossless Citation Spec requires, and the same URL cited twice gets two different hex codes."
+lede: >-
+  Paste rewrites citation tokens and nothing else — headings flatten, refs become self-referential links, and one URL gets two hex codes.
 date_created: 2026-08-08
 date_modified: 2026-08-08
 authors:

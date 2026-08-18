@@ -10,6 +10,8 @@ authors:
 at_semantic_version: 0.0.1.0
 tags:
   - Spec
+lede: "Stop the parsing problem at the source: a paste-target textarea plus a Google/Perplexity selector, feeding the parser at the cursor."
+summary: "Short spec for a cite-wide modal that intercepts LLM output before it lands in a note. It specifies only the UI surface and the insertion point; the parsing rules it delegates to are in Parse-Common-Citation-Formats.md and the output format is Lossless-Citation-Spec.md. Implementation likely requires refactoring the existing parsing logic so it can be called from both the modal and the current command."
 ---
 
 
