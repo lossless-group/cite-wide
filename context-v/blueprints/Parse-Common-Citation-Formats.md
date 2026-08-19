@@ -12,6 +12,7 @@ tags:
   - Blueprint
 lede: "Six citation patterns coexist in one file; the existing regex only matches [1], so Google's [1, 2, 3] and Perplexity's [1][2] slip through."
 summary: "Blueprint explaining why cite-wide's whole-file scripts fail on real, messy, multi-source files, and proposing a provider-aware parser that clusters citations by the emitting LLM's pattern, transforms what it can, and flags what it cannot. Carries a coverage table of the six coexisting patterns and long verbatim Google, Perplexity, and Claude outputs to test a parser against. The Modal-for-Pasting-LLM-Native-Content spec is the UI intended to feed this parser."
+publish: true
 ---
 
 # Troubleshooting Implementation

@@ -28,6 +28,7 @@ site_uuid: 356e45e3-2610-4e25-9da9-40e86143d3bd
 hex_code: nmjhu6
 date_authored_initial_draft: 2026-08-08
 date_authored_current_draft: 2026-08-08
+publish: true
 ---
 
 # Paste LLM Content drops prose structure and emits link-only citations

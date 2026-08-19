@@ -20,6 +20,7 @@ sibling_docs:
   - "Citation-Acquisition-Pipeline.md"
 site_uuid: 0ecc4baf-c4ca-4267-b2a0-9f4021a5bb63
 hex_code: xw1xco
+publish: true
 ---
 
 > **How to read this doc.** Every field in the Lossless Citation schema gets an entry below, in the same order as the schema sections. Each entry follows the same eight-part template (Source of Truth / Cheap Path / Expensive Path / Fallback / Validation / Applicable Types / Examples / Notes). **Skim by field name on first read; read deeply only the fields you're about to fill.**
