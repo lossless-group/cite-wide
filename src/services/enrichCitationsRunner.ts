@@ -107,7 +107,8 @@ async function fetchCitation(current: Record<string, unknown>, usage: CitationUs
         let brand = tier1?.brand;
         if (needsPublisherBrand(tier1, url)) brand = mergeBrand(brand, await fetchPublisherBrand(url));
         const channel = isYouTubeUrl(url) && !(tier1?.authors.length) ? await fetchYouTubeChannel(url) : null;
-        return { url, fetched: { tier1, tier2, brand, channel, fetchedOn: today } };
+        const fetchedAt = tier1 || tier2 ? new Date().toISOString() : undefined;
+        return { url, fetched: { tier1, tier2, brand, channel, fetchedOn: today, fetchedAt } };
     } catch (error) {
         console.warn(`Cite Wide: enriching ${url} failed.`, error);
         return { url, fetched: empty };

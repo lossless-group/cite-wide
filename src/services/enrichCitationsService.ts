@@ -32,6 +32,8 @@ export interface FetchedCitation {
     channel: string | null;
     /** The day of the fetch, YYYY-MM-DD. */
     fetchedOn: string;
+    /** ISO timestamp of the fetch, when tier 1 or tier 2 returned anything. */
+    fetchedAt?: string | undefined;
 }
 
 /** Where a citation is used today. */
@@ -64,6 +66,9 @@ export interface CitationPlan {
 
 /** Refreshed on every successful fetch, so it never counts as a change on its own. */
 export const ACCESS_DATE_KEY = 'date_recently_accessed';
+/** When the source was last fetched (ISO timestamp). Bookkeeping, like the access date. */
+export const FETCHED_KEY = 'date_fetched';
+const BOOKKEEPING_KEYS = new Set([ACCESS_DATE_KEY, FETCHED_KEY]);
 
 /** The light-format fields citationFileService writes, checked by the report. */
 export const LIGHT_FIELDS = ['title', 'author', 'url', 'date', 'source', 'referenceText'] as const;
@@ -235,6 +240,7 @@ export function planCitationChanges(
     }
 
     if (tier1) propose(ACCESS_DATE_KEY, fetched.fetchedOn, 'the page was read');
+    if ((tier1 || tier2) && fetched.fetchedAt) propose(FETCHED_KEY, fetched.fetchedAt, 'when the source was fetched');
 
     // Usage, as links Obsidian keeps correct through renames.
     if (usage && usage.files.length > 0) {
@@ -248,9 +254,9 @@ export function planCitationChanges(
     return changes;
 }
 
-/** True when a plan changes more than the access date. */
+/** True when a plan changes more than the bookkeeping dates (access date, fetch time). */
 export function hasRealChanges(changes: readonly FieldChange[]): boolean {
-    return changes.some(c => c.key !== ACCESS_DATE_KEY);
+    return changes.some(c => !BOOKKEEPING_KEYS.has(c.key));
 }
 
 /**

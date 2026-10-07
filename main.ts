@@ -688,6 +688,7 @@ export default class CiteWidePlugin extends Plugin {
         let tier2: Tier2Meta | null = null;
         let brand: BrandAssets | undefined;
         let channel: string | null = null;
+        let fetchedAt: string | undefined;
         if (url) {
             const progress = new Notice('Reading the source\u2019s metadata\u2026', 0);
             try {
@@ -695,6 +696,7 @@ export default class CiteWidePlugin extends Plugin {
                 if (needsTier2(tier1)) tier2 = await fetchTier2(url);
                 brand = tier1?.brand;
                 if (isYouTubeUrl(url) && !(tier1?.authors.length)) channel = await fetchYouTubeChannel(url);
+                if (tier1 || tier2) fetchedAt = new Date().toISOString();
                 if (needsPublisherBrand(tier1, url)) brand = mergeBrand(brand, await fetchPublisherBrand(url));
             } finally {
                 progress.hide();
@@ -715,6 +717,7 @@ export default class CiteWidePlugin extends Plugin {
                     capture,
                     tier1,
                     brand,
+                    fetchedAt,
                     sourceFile,
                     referenceText: parsed?.referenceText,
                     today: localDate(),

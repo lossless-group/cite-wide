@@ -410,3 +410,16 @@ describe('the runner, over a stub vault with a stubbed requestUrl', () => {
         assert.equal(plans, null);
     });
 });
+
+test('date_fetched records the fetch time and, like the access date, is bookkeeping only', async () => {
+    const { planCitationChanges, hasRealChanges } = await import('../src/services/enrichCitationsService');
+    const at = '2026-10-06T19:54:40.000Z';
+    const changes = planCitationChanges(
+        { hexId: 'x', title: 'T', url: 'https://example.com/a', author: 'Jane Doe', date: '2025-01', source: 'Acme', referenceText: 'r' },
+        { tier1: null, tier2: { title: 'T', authors: [], datePublished: undefined, publisher: undefined }, brand: undefined, channel: null, fetchedOn: '2026-10-06', fetchedAt: at },
+        undefined,
+    );
+    const fetched = changes.find(c => c.key === 'date_fetched');
+    assert.equal(fetched?.to, at);
+    assert.equal(hasRealChanges(changes.filter(c => c.key === 'date_fetched' || c.key === 'date_recently_accessed')), false);
+});

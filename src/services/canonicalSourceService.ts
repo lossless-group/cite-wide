@@ -604,6 +604,8 @@ export interface AssembleContext {
     brand?: BrandAssets | undefined;
     /** Writes filesUsedIn / cited_in_files as wikilinks. Defaults to path-only links. */
     linker?: FileLinker | undefined;
+    /** ISO timestamp of the metadata fetch, when either tier returned anything. */
+    fetchedAt?: string | undefined;
     /** Today, YYYY-MM-DD. */
     today: string;
     newUuid: () => string;
@@ -670,6 +672,7 @@ export function assembleCanonicalFrontmatter(existing: Record<string, unknown>, 
     setOrDrop('first_accessed_at_url', asString(existing['first_accessed_at_url']) || url);
     fm['date_added'] = asDateText(existing['date_added']) ?? ctx.today;
     if (fetched) fm['date_recently_accessed'] = ctx.today;
+    if (ctx.fetchedAt) fm['date_fetched'] = ctx.fetchedAt;
     if (fetched?.image) fm['piece_og_image'] = fetched.image;
     // Publisher brand assets: refreshed whenever they were fetched, never blanked.
     const brand = ctx.brand ?? fetched?.brand;
@@ -703,6 +706,8 @@ export interface PromoteArgs {
     tier1: DirectFetchResult | null;
     /** Publisher brand assets (page, filled in from the homepage when needed). */
     brand?: BrandAssets | undefined;
+    /** ISO timestamp of the metadata fetch, when either tier returned anything. */
+    fetchedAt?: string | undefined;
     sourceFile?: string | undefined;
     referenceText?: string | undefined;
     today: string;
@@ -814,6 +819,7 @@ export async function promoteCanonicalSource(app: App, args: PromoteArgs): Promi
             downloadedContentPath,
             sourceTextPath,
             linker: obsidianLinker(app, path),
+            fetchedAt: args.fetchedAt,
         });
         for (const key of Object.keys(fm)) if (!(key in next)) delete fm[key];
         Object.assign(fm, next);
