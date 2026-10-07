@@ -68,3 +68,12 @@ test('a junk meta author does not shadow a real byline element (Deloitte)', () =
     const html = '<meta name="author" content="changing demand as the learning needs"><span class="byline">By</span><span class="byline__name">Maggie Wooll</span>';
     assert.deepEqual(parseDirectFetchHtml(html, U).authors, ['Maggie Wooll']);
 });
+
+test("BEM byline names win; job-title and role elements never count (Deloitte's real markup)", () => {
+    const html = '<span class="cmp-di-authors__text">By</span>'
+        + '<span class="cmp-di-authors__name cmp-di-authors__name--external">Maggie Wooll</span>'
+        + '<span class="cmp-di-authors__name cmp-di-authors__name--external">John Hagel III</span>'
+        + '<div class="author-role">Former Independent Co-Chairman</div>';
+    assert.deepEqual(bylineElements(html), ['Maggie Wooll', 'John Hagel III']);
+    assert.deepEqual(bylineElements('<div class="author-role">Head of Research</div><div class="author-bio">Writes about X</div>'), []);
+});

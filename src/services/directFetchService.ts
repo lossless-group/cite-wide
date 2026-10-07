@@ -355,15 +355,24 @@ export function twitterWrittenBy(html: string): string[] {
  * "By" and "Published by" prefixes are dropped here.
  */
 export function bylineElements(html: string): string[] {
-    const out: string[] = [];
-    const re = /<(?:a|span|div|p|li|address|strong)\b[^>]*(?:class|itemprop)\s*=\s*["'][^"']*\b(?:author|byline)(?:-name|__name|_name|Name)?\b[^"']*["'][^>]*>((?:(?!<\/?(?:a|span|div|p|li|address|strong)\b)[\s\S]){1,200})/gi;
+    // Whole class tokens, BEM-aware. Deloitte marks names
+    // `cmp-di-authors__name` and job titles `author-role`; matching any class
+    // that merely starts with "author" picked the job title.
+    const NAME_TOKEN = /^(?:[a-z0-9]+[-_]+)*(?:authors?|byline)(?:[-_]{1,2}name|Name)(?:--[a-z0-9-]+)?$/i;
+    const BARE_TOKEN = /^(?:[a-z0-9]+[-_]+)*(?:authors?|byline)(?:--[a-z0-9-]+)?$/i;
+    const named: string[] = [];
+    const bare: string[] = [];
+    const re = /<(a|span|div|p|li|address|strong|h[2-6])\b([^>]*)>((?:(?!<\/?(?:a|span|div|p|li|address|strong|h[2-6])\b)[\s\S]){1,200})/gi;
     for (const m of html.matchAll(re)) {
-        const text = decodeEntities((m[1] ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+        const attrs = m[2] ?? '';
+        const tokens = [...(attr(`<x ${attrs}>`, 'class') ?? '').split(/\s+/), attr(`<x ${attrs}>`, 'itemprop') === 'author' ? 'author' : ''].filter(Boolean);
+        const kind = tokens.some(t => NAME_TOKEN.test(t)) ? named : tokens.some(t => BARE_TOKEN.test(t)) ? bare : null;
+        if (!kind) continue;
+        const text = decodeEntities((m[3] ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
             .replace(/^(published )?by\s*:?\s*/i, '');
-        if (text && text.length <= 60 && !out.includes(text)) out.push(text);
-        if (out.length >= 4) break;
+        if (text && text.length <= 60 && !kind.includes(text)) kind.push(text);
     }
-    return out;
+    return (named.length ? named : bare).slice(0, 6);
 }
 
 /** Content types we save as files rather than parse as HTML. */
