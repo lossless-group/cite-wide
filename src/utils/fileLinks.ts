@@ -10,8 +10,8 @@
 // Format follows the vault's own convention (8,090 of its 15,704 links,
 // surveyed 2026-10-06): full vault path without extension, aliased to the
 // note's display name: [[Vocabulary/Relational Databases|Relational Databases]].
-// The alias is the note's frontmatter `title` when it has one, else its
-// file name.
+// The alias is the note's frontmatter `title` when it is just the file name
+// re-spaced, else the file name (see aliasFor).
 //
 // Old files still hold plain paths, so every comparison treats a path and a
 // link to the same note as equal, and plain paths are upgraded to links
@@ -46,10 +46,23 @@ export interface FileLinker {
     upgrade(entry: string): string;
 }
 
+const looseKey = (s: string): string => s.toLowerCase().replace(/[\s_-]+/g, '');
+
+/**
+ * The alias for a note: its frontmatter `title` when that is the file name
+ * re-spaced or re-cased ("Multi Modal Databases" for "Multi-Modal Databases"),
+ * else the file name. Some notes' `title` is a tagline ("Open source no-code
+ * database" on Baserow), which would make a misleading link label.
+ */
+export function aliasFor(path: string, title?: string): string {
+    const name = basename(path);
+    const t = title?.trim();
+    return t && looseKey(t) === looseKey(name) ? t : name;
+}
+
 /** [[full/path|Alias]] for a vault path. */
-export function formatFileLink(path: string, alias?: string): string {
-    const target = withoutExt(path);
-    return `[[${target}|${alias?.trim() || basename(path)}]]`;
+export function formatFileLink(path: string, title?: string): string {
+    return `[[${withoutExt(path)}|${aliasFor(path, title)}]]`;
 }
 
 /** Path-only linker for code that has no App (pure assembly, tests). */

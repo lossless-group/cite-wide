@@ -55,6 +55,14 @@ test('legacy plain paths and bare links upgrade to the full form while the note 
     assert.deepEqual(addFileLink(['Gone/Deleted Note.md'], undefined, linker), ['Gone/Deleted Note.md'], 'unresolvable: unchanged');
 });
 
+test("a tagline title is not used as the alias; a re-spaced one is", () => {
+    const app = appWith(['Tooling/Baserow.md', 'Vocabulary/Multi-Modal Databases.md'],
+        { 'Tooling/Baserow.md': 'Open source no-code database', 'Vocabulary/Multi-Modal Databases.md': 'Multi Modal Databases' });
+    const linker = obsidianLinker(app, 'Citations/x.md');
+    assert.deepEqual(addFileLink([], 'Tooling/Baserow.md', linker), ['[[Tooling/Baserow|Baserow]]']);
+    assert.deepEqual(addFileLink([], 'Vocabulary/Multi-Modal Databases.md', linker), ['[[Vocabulary/Multi-Modal Databases|Multi Modal Databases]]']);
+});
+
 test('a path and a link to the same note are one entry, not two', () => {
     const app = appWith(['Vocabulary/Relational Databases.md']);
     const linker = obsidianLinker(app, 'Citations/3l14s3.md');
