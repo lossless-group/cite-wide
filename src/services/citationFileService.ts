@@ -92,7 +92,7 @@ export class CitationFileService {
 
             const existing = this.app.vault.getAbstractFileByPath(filepath);
             if (existing instanceof TFile) {
-                await this.updateCitationUsage(existing, sourceFile);
+                await this.updateCitationUsage(existing, sourceFile, referenceText, url);
                 return existing;
             }
 
@@ -114,9 +114,25 @@ export class CitationFileService {
      * Increment usage count and append the source file to filesUsedIn.
      * Atomic via Obsidian's processFrontMatter API; no manual YAML emission.
      */
-    public async updateCitationUsage(citationFile: TFile, sourceFile?: string): Promise<void> {
+    public async updateCitationUsage(
+        citationFile: TFile,
+        sourceFile?: string,
+        referenceText?: string,
+        url?: string
+    ): Promise<void> {
         try {
+            // A citation file can exist before its footnote has text: "Insert
+            // hex citation" creates it on insert. Backfill empty fields from the
+            // footnote when one is available; never overwrite filled ones.
+            const extracted = referenceText ? this.extractMetadataFromReference(referenceText, url) : {};
             await this.app.fileManager.processFrontMatter(citationFile, (fm: Record<string, unknown>) => {
+                if (referenceText && !asString(fm['referenceText'])) {
+                    fm['referenceText'] = referenceText;
+                    for (const key of ['url', 'title', 'author', 'date', 'source'] as const) {
+                        const value = extracted[key];
+                        if (typeof value === 'string' && value && !asString(fm[key])) fm[key] = value;
+                    }
+                }
                 fm['usageCount'] = (asNumber(fm['usageCount']) ?? 0) + 1;
                 fm['lastModified'] = new Date().toISOString();
                 if (sourceFile) {
@@ -241,19 +257,19 @@ export class CitationFileService {
         const filepath = `${this.citationsFolder}/${hexId}.md`;
         const existing = this.app.vault.getAbstractFileByPath(filepath);
 
+        const referenceMatch = group.matches.find(m => m.isReferenceSource === true);
+        const referenceText = referenceMatch?.lineContent
+            .replace(/^\s*\[\^[a-z0-9]+\]:\s*/i, '')
+            .trim();
+        const urlMatch = referenceText?.match(/https?:\/\/[^\s)]+/);
+        const url = urlMatch ? urlMatch[0] : undefined;
+
         if (existing instanceof TFile) {
-            await this.updateCitationUsage(existing, sourceFile);
+            await this.updateCitationUsage(existing, sourceFile, referenceText, url);
             return 'updated';
         }
 
-        const referenceMatch = group.matches.find(m => m.isReferenceSource === true);
-        if (!referenceMatch) return 'error';
-
-        const referenceText = referenceMatch.lineContent
-            .replace(/^\s*\[\^[a-z0-9]+\]:\s*/i, '')
-            .trim();
-        const urlMatch = referenceText.match(/https?:\/\/[^\s)]+/);
-        const url = urlMatch ? urlMatch[0] : undefined;
+        if (!referenceText) return 'error';
 
         const file = await this.createCitationFile(hexId, referenceText, url, sourceFile);
         return file ? 'saved' : 'error';

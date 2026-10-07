@@ -56,7 +56,7 @@ export class CitationService {
     public extractCitations(content: string): CitationGroup[] {
         // Match both numeric citations [1] and hex citations [^1]
         const numericCitationPattern = /\[(\d+)\](?!:)/g;
-        const hexCitationPattern = /\[\^([a-f0-9]+)\](?!:)/g;
+        const hexCitationPattern = /\[\^([a-z0-9]+)\](?!:)/g;
         const matches: CitationMatch[] = [];
         const lines = content.split('\n');
         
@@ -69,7 +69,7 @@ export class CitationService {
             
             
             // Skip lines that are reference definitions
-            if (/^\s*\[\d+\]:/.test(line) || /^\s*\[\^[a-f0-9]+\]:/.test(line)) {
+            if (/^\s*\[\d+\]:/.test(line) || /^\s*\[\^[a-z0-9]+\]:/.test(line)) {
                 continue;
             }
             
@@ -166,7 +166,7 @@ export class CitationService {
             }
             
             // Check for hex reference definitions [^hex]: text
-            refMatch = line.match(/^\s*\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+            refMatch = line.match(/^\s*\[\^([a-z0-9]+)\]\s*:?\s*(.*)/);
             if (refMatch && refMatch[1]) {
 
                 const hexId = refMatch[1];
@@ -244,7 +244,7 @@ export class CitationService {
                     // Use a more careful approach to preserve spacing
                     const lines = updatedContent.split('\n');
                     const updatedLines = lines.map(line => {
-                        const refMatch = line.match(/^(\s*)\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+                        const refMatch = line.match(/^(\s*)\[\^([a-z0-9]+)\]\s*:?\s*(.*)/);
                         if (refMatch && refMatch[2] === oldHexId) {
                             const [, leadingSpaces, , restOfLine] = refMatch;
                             return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
@@ -313,7 +313,7 @@ export class CitationService {
                     const oldHexId = group.number.replace('hex_', '');
                     const lines = updatedContent.split('\n');
                     const updatedLines = lines.map(line => {
-                        const refMatch = line.match(/^(\s*)\[\^([a-f0-9]+)\]\s*:?\s*(.*)/);
+                        const refMatch = line.match(/^(\s*)\[\^([a-z0-9]+)\]\s*:?\s*(.*)/);
                         if (refMatch && refMatch[2] === oldHexId) {
                             const [, leadingSpaces, , restOfLine] = refMatch;
                             return `${leadingSpaces}[^${hexId}]: ${restOfLine}`;
