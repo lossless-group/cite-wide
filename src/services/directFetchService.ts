@@ -33,6 +33,32 @@ export interface DirectFetchResult {
     scholarly: boolean;
     /** The response's content-type header, when the fetch provided one. */
     contentType: string | undefined;
+    /** Publisher brand assets declared by the page. */
+    brand: BrandAssets;
+}
+
+/**
+ * A publisher's brand assets, as URLs. Each is what a site declares for a
+ * specific job, so they are kept apart rather than collapsed into "the icon":
+ * the favicon is tiny and often a letterform, the app icon is the square
+ * home-screen mark, the logo is the trademark/wordmark, and the mask icon is
+ * the single-color SVG Safari uses for pinned tabs.
+ */
+export interface BrandAssets {
+    /** <link rel="icon">, preferring SVG, then the largest PNG up to 96 px; else /favicon.ico. */
+    favicon: string;
+    /** Largest apple-touch-icon, else msapplication-TileImage, else the largest icon ≥ 120 px. */
+    appIcon: string | undefined;
+    /** The trademark/wordmark: JSON-LD Organization or publisher `logo`, else og:logo, else itemprop="logo". */
+    logo: string | undefined;
+    /** <link rel="mask-icon">: a single-color SVG of the mark. */
+    maskIcon: string | undefined;
+    /** The mask icon's declared color. */
+    maskIconColor: string | undefined;
+    /** <meta name="theme-color">, else msapplication-TileColor. */
+    brandColor: string | undefined;
+    /** <link rel="manifest">: the web app manifest, which lists more icons. */
+    webManifest: string | undefined;
 }
 
 export type ParsedHtmlMeta = Omit<DirectFetchResult, 'contentType'>;
@@ -156,13 +182,127 @@ function resolveAgainstBase(href: string, baseUrl: string): string {
     }
 }
 
-function getFavicon(html: string, baseUrl: string): string {
-    const re1 =
-        /<link\s+[^>]*rel\s*=\s*["'][^"']*icon[^"']*["'][^>]*href\s*=\s*["']([^"']+)["']/i;
-    const re2 =
-        /<link\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*rel\s*=\s*["'][^"']*icon[^"']*["']/i;
-    const href = html.match(re1)?.[1] ?? html.match(re2)?.[1];
-    return resolveAgainstBase(href ?? '/favicon.ico', baseUrl);
+interface LinkTag {
+    rel: string[];
+    href: string;
+    sizes: number;
+    type: string;
+    color: string | undefined;
+    itemprop: string | undefined;
+}
+
+function attr(tag: string, name: string): string | undefined {
+    const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+    const v = m ? (m[1] ?? m[2] ?? m[3]) : undefined;
+    return v === undefined ? undefined : decodeEntities(v).trim();
+}
+
+/** Largest dimension in a `sizes` attribute ("180x180", "16x16 32x32", "any"). */
+function largestSize(sizes: string | undefined): number {
+    if (!sizes) return 0;
+    if (/\bany\b/i.test(sizes)) return Number.MAX_SAFE_INTEGER;
+    let max = 0;
+    for (const m of sizes.matchAll(/(\d+)x(\d+)/gi)) max = Math.max(max, Number(m[1]), Number(m[2]));
+    return max;
+}
+
+function linkTags(html: string, baseUrl: string): LinkTag[] {
+    const out: LinkTag[] = [];
+    for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+        const tag = m[0];
+        const href = attr(tag, 'href');
+        if (!href) continue;
+        out.push({
+            rel: (attr(tag, 'rel') ?? '').toLowerCase().split(/\s+/).filter(Boolean),
+            href: resolveAgainstBase(href, baseUrl),
+            sizes: largestSize(attr(tag, 'sizes')),
+            type: (attr(tag, 'type') ?? '').toLowerCase(),
+            color: attr(tag, 'color'),
+            itemprop: attr(tag, 'itemprop'),
+        });
+    }
+    return out;
+}
+
+/** Every JSON-LD node on the page, flattened through @graph and arrays. */
+function jsonLdNodes(html: string): Record<string, unknown>[] {
+    const nodes: Record<string, unknown>[] = [];
+    const visit = (v: unknown): void => {
+        if (Array.isArray(v)) { v.forEach(visit); return; }
+        if (v && typeof v === 'object') {
+            const obj = v as Record<string, unknown>;
+            nodes.push(obj);
+            if (obj['@graph']) visit(obj['@graph']);
+            if (obj['publisher']) visit(obj['publisher']);
+        }
+    };
+    for (const m of html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+        try {
+            visit(JSON.parse(m[1] ?? '') as unknown);
+        } catch {
+            // Malformed JSON-LD is common; skip it.
+        }
+    }
+    return nodes;
+}
+
+const ORGANIZATION_TYPES = /^(Organization|NewsMediaOrganization|Corporation|EducationalOrganization|GovernmentOrganization|NGO|ResearchOrganization|OnlineBusiness)$/;
+
+function logoUrl(logo: unknown): string | undefined {
+    if (typeof logo === 'string') return logo;
+    if (Array.isArray(logo)) return logoUrl(logo[0]);
+    if (logo && typeof logo === 'object') {
+        const o = logo as Record<string, unknown>;
+        return logoUrl(o['url'] ?? o['contentUrl']);
+    }
+    return undefined;
+}
+
+export function extractBrandAssets(html: string, baseUrl: string): BrandAssets {
+    const links = linkTags(html, baseUrl);
+    const has = (l: LinkTag, rel: string) => l.rel.includes(rel);
+
+    const icons = links.filter(l => has(l, 'icon'));
+    const svgIcon = icons.find(l => l.type === 'image/svg+xml' || /\.svg(\?|$)/i.test(l.href));
+    const smallIcons = icons.filter(l => l.sizes <= 96).sort((a, b) => b.sizes - a.sizes);
+    const favicon = svgIcon?.href ?? smallIcons[0]?.href ?? icons[0]?.href ?? resolveAgainstBase('/favicon.ico', baseUrl);
+
+    const touch = links
+        .filter(l => has(l, 'apple-touch-icon') || has(l, 'apple-touch-icon-precomposed'))
+        .sort((a, b) => (b.sizes || 180) - (a.sizes || 180));
+    const tile = getMeta(html, 'name', 'msapplication-TileImage');
+    const bigIcon = icons.filter(l => l.sizes >= 120 && l.sizes !== Number.MAX_SAFE_INTEGER).sort((a, b) => b.sizes - a.sizes)[0];
+    const appIcon = touch[0]?.href ?? (tile ? resolveAgainstBase(tile, baseUrl) : undefined) ?? bigIcon?.href;
+
+    let logo: string | undefined;
+    for (const node of jsonLdNodes(html)) {
+        const t = node['@type'];
+        const types = (Array.isArray(t) ? t : [t]).filter((x): x is string => typeof x === 'string');
+        if (types.some(x => ORGANIZATION_TYPES.test(x))) {
+            const u = logoUrl(node['logo']);
+            if (u) { logo = resolveAgainstBase(u, baseUrl); break; }
+        }
+    }
+    if (!logo) {
+        const og = getMeta(html, 'property', 'og:logo');
+        if (og) logo = resolveAgainstBase(og, baseUrl);
+    }
+    if (!logo) {
+        const itemprop = links.find(l => l.itemprop === 'logo')?.href
+            ?? html.match(/<img\b[^>]*itemprop\s*=\s*["']logo["'][^>]*>/i)?.[0];
+        if (itemprop) logo = itemprop.startsWith('<') ? (() => { const src = attr(itemprop, 'src'); return src ? resolveAgainstBase(src, baseUrl) : undefined; })() : itemprop;
+    }
+
+    const mask = links.find(l => has(l, 'mask-icon'));
+    return {
+        favicon,
+        appIcon,
+        logo,
+        maskIcon: mask?.href,
+        maskIconColor: mask?.color,
+        brandColor: getMeta(html, 'name', 'theme-color') ?? getMeta(html, 'name', 'msapplication-TileColor') ?? undefined,
+        webManifest: links.find(l => has(l, 'manifest'))?.href,
+    };
 }
 
 /** Content types we save as files rather than parse as HTML. */
@@ -201,7 +341,8 @@ export function parseDirectFetchHtml(html: string, url: string): ParsedHtmlMeta 
     const image = rawImage ? resolveAgainstBase(rawImage, url) : undefined;
     const siteName = getMeta(html, 'property', 'og:site_name') ?? '';
     const type = getMeta(html, 'property', 'og:type') ?? '';
-    const favicon = getFavicon(html, url);
+    const brand = extractBrandAssets(html, url);
+    const favicon = brand.favicon;
     // Tiers, first non-empty wins — NOT merged. A journal page can carry both a
     // generic `author` naming one person and a full `citation_author` set;
     // merging would double-list them under two spellings.
@@ -242,6 +383,7 @@ export function parseDirectFetchHtml(html: string, url: string): ParsedHtmlMeta 
         authors,
         published,
         scholarly: !!citationTitle || citationAuthors.length > 0,
+        brand,
     };
 }
 

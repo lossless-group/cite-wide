@@ -11,7 +11,7 @@
 
 import { requestUrl, TFile, type App } from 'obsidian';
 import { asNumber, asString, asStringArray } from '../utils/coerce';
-import { fetchDirectOpenGraph, headerValue, type DirectFetchResult } from './directFetchService';
+import { fetchDirectOpenGraph, headerValue, type BrandAssets, type DirectFetchResult } from './directFetchService';
 import { urlCitationService } from './urlCitationService';
 
 export const PUBLICATION_TYPES = ['book', 'report', 'paper', 'article', 'web page', 'video', 'other'] as const;
@@ -386,6 +386,42 @@ export function needsTier2(tier1: DirectFetchResult | null): boolean {
     return !tier1 || !tier1.title.trim() || tier1.authors.length === 0;
 }
 
+/**
+ * The publisher's brand assets need the homepage when the source page can't
+ * supply them: the fetch failed or hit a bot-check, the source is a document
+ * (a PDF has no <head>), or the page declared neither an app icon nor a logo.
+ */
+export function needsPublisherBrand(tier1: DirectFetchResult | null, url: string | undefined): boolean {
+    if (!url) return false;
+    const root = siteRoot(url);
+    if (!root || root === url.replace(/\/$/, '')) return false;
+    return !tier1 || !!documentExtension(url, tier1.contentType) || (!tier1.brand.appIcon && !tier1.brand.logo);
+}
+
+/** Brand assets from the publisher's homepage. Null on failure, timeout, or a bot-check. */
+export async function fetchPublisherBrand(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<BrandAssets | null> {
+    const root = siteRoot(url);
+    if (!root) return null;
+    const home = await fetchTier1(root, timeoutMs);
+    return home?.brand ?? null;
+}
+
+/** Page-level assets win; the homepage fills what the page left empty. */
+export function mergeBrand(page: BrandAssets | undefined, home: BrandAssets | null): BrandAssets | undefined {
+    if (!page) return home ?? undefined;
+    if (!home) return page;
+    return {
+        // A page with no <link rel="icon"> falls back to /favicon.ico on its own host; prefer the homepage's declared icon.
+        favicon: page.favicon.endsWith('/favicon.ico') ? home.favicon : page.favicon,
+        appIcon: page.appIcon ?? home.appIcon,
+        logo: page.logo ?? home.logo,
+        maskIcon: page.maskIcon ?? home.maskIcon,
+        maskIconColor: page.maskIconColor ?? home.maskIconColor,
+        brandColor: page.brandColor ?? home.brandColor,
+        webManifest: page.webManifest ?? home.webManifest,
+    };
+}
+
 /** Tier 2: Jina Reader's metadata. Null on failure or timeout. */
 export async function fetchTier2(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Tier2Meta | null> {
     const reader = await withTimeout(urlCitationService.fetchReader(url), timeoutMs, null);
@@ -474,6 +510,8 @@ export interface AssembleContext {
     form: CanonicalForm;
     /** Tier-1 result; null when the fetch failed or there was no URL. */
     fetched: DirectFetchResult | null;
+    /** Publisher brand assets; defaults to the tier-1 page's own. */
+    brand?: BrandAssets | undefined;
     /** Today, YYYY-MM-DD. */
     today: string;
     newUuid: () => string;
@@ -542,7 +580,18 @@ export function assembleCanonicalFrontmatter(existing: Record<string, unknown>, 
     fm['date_added'] = asDateText(existing['date_added']) ?? ctx.today;
     if (fetched) fm['date_recently_accessed'] = ctx.today;
     if (fetched?.image) fm['piece_og_image'] = fetched.image;
-    if (fetched?.favicon) fm['publisher_favicon_url'] = fetched.favicon;
+    // Publisher brand assets: refreshed whenever they were fetched, never blanked.
+    const brand = ctx.brand ?? fetched?.brand;
+    const assets: Array<[string, string | undefined]> = [
+        ['publisher_favicon_url', brand?.favicon || fetched?.favicon],
+        ['publisher_app_icon_url', brand?.appIcon],
+        ['publisher_logo_url', brand?.logo],
+        ['publisher_mask_icon_url', brand?.maskIcon],
+        ['publisher_mask_icon_color', brand?.maskIconColor],
+        ['publisher_brand_color', brand?.brandColor],
+        ['publisher_web_manifest_url', brand?.webManifest],
+    ];
+    for (const [key, value] of assets) if (value) fm[key] = value;
     if (ctx.downloadedContentPath) fm['downloaded_content_path'] = ctx.downloadedContentPath;
     if (ctx.sourceTextPath) fm['source_text_path'] = ctx.sourceTextPath;
     // A separate array, so the YAML writer doesn't emit an anchor/alias pair.
@@ -561,6 +610,8 @@ export interface PromoteArgs {
     /** The modal's "capture the source file and text" checkbox. */
     capture: boolean;
     tier1: DirectFetchResult | null;
+    /** Publisher brand assets (page, filled in from the homepage when needed). */
+    brand?: BrandAssets | undefined;
     sourceFile?: string | undefined;
     referenceText?: string | undefined;
     today: string;
@@ -663,6 +714,7 @@ export async function promoteCanonicalSource(app: App, args: PromoteArgs): Promi
             hexId: args.hexId,
             form: args.form,
             fetched: args.tier1,
+            brand: args.brand,
             today: args.today,
             now: args.now,
             newUuid: args.newUuid ?? (() => crypto.randomUUID()),

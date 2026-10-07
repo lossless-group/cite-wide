@@ -14,7 +14,7 @@ authors:
   - Michael Staton
 augmented_with:
   - Claude Code on Claude Opus 5.5
-at_semantic_version: 0.0.1.0
+at_semantic_version: 0.0.2.0
 status: Signed-Off
 tags:
   - Spec
@@ -74,7 +74,14 @@ The canonical file **keeps every light-format key** (`hexId`, `title`, `url`, `r
 | `date_recently_accessed` | today, if the fetch succeeded |
 | `piece_og_image` | `og:image` |
 | `cited_in_files` | mirrors `filesUsedIn` |
-| `publisher_favicon_url` | tier 1 favicon |
+| `publisher_favicon_url` | `<link rel="icon">`: SVG first, then the largest PNG up to 96 px, else `/favicon.ico` |
+| `publisher_app_icon_url` | largest `apple-touch-icon`, else `msapplication-TileImage`, else an icon of 120 px or more |
+| `publisher_logo_url` | the trademark/wordmark: JSON-LD `Organization` / `publisher` `logo`, else `og:logo`, else `itemprop="logo"` |
+| `publisher_mask_icon_url`, `publisher_mask_icon_color` | `<link rel="mask-icon">`, the single-color SVG mark, and its color |
+| `publisher_brand_color` | `<meta name="theme-color">`, else `msapplication-TileColor` |
+| `publisher_web_manifest_url` | `<link rel="manifest">` |
+
+**Brand assets come from the publisher's homepage when the source page can't supply them:** the source is a document (a PDF has no `<head>`), the fetch failed or hit a bot-check, or the page declared neither an app icon nor a logo. Page-level assets win, and the homepage fills the gaps. They're refreshed on each promote but never blanked.
 | `downloaded_content_path` | `Citations/_files/<id>.<ext>`, when a file was downloaded |
 | `source_text_path` | `Citations/_text/<id>.md`, when text was imported (an addition to the standard: the markdown text, distinct from `structured_data_path`'s JSON) |
 

@@ -18,11 +18,14 @@ import {
     findCitationIdAtCursor,
     findFootnoteDefinition,
     needsTier2,
+    needsPublisherBrand,
+    fetchPublisherBrand,
+    mergeBrand,
     parseFootnote,
     promoteCanonicalSource,
     type Tier2Meta,
 } from './src/services/canonicalSourceService';
-import type { DirectFetchResult } from './src/services/directFetchService';
+import type { BrandAssets, DirectFetchResult } from './src/services/directFetchService';
 import { isRecord } from './src/utils/coerce';
 
 export default class CiteWidePlugin extends Plugin {
@@ -667,11 +670,14 @@ export default class CiteWidePlugin extends Plugin {
         const url = parsed?.url ?? (typeof existing['url'] === 'string' && existing['url'] ? existing['url'] : undefined);
         let tier1: DirectFetchResult | null = null;
         let tier2: Tier2Meta | null = null;
+        let brand: BrandAssets | undefined;
         if (url) {
             const progress = new Notice('Reading the source\u2019s metadata\u2026', 0);
             try {
                 tier1 = await fetchTier1(url);
                 if (needsTier2(tier1)) tier2 = await fetchTier2(url);
+                brand = tier1?.brand;
+                if (needsPublisherBrand(tier1, url)) brand = mergeBrand(brand, await fetchPublisherBrand(url));
             } finally {
                 progress.hide();
             }
@@ -690,6 +696,7 @@ export default class CiteWidePlugin extends Plugin {
                     form,
                     capture,
                     tier1,
+                    brand,
                     sourceFile,
                     referenceText: parsed?.referenceText,
                     today: localDate(),

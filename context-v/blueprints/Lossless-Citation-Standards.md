@@ -150,6 +150,12 @@ publisher_url: "https://example.com" # Canonical site root, not a section page.
 publisher_type:                      # Single value from the Train-Case taxonomy. Drives field applicability.
   - "Industry-Media"
 publisher_favicon_url: "https://example.com/favicon.ico"  # Web-ready rendering needs this.
+publisher_app_icon_url: "https://example.com/apple-touch-icon-180.png"  # Square home-screen mark (largest apple-touch-icon). Cards and avatars.
+publisher_logo_url: "https://example.com/logo-wordmark.svg"  # The trademark/wordmark, from JSON-LD Organization.logo or og:logo. Attribution lines and source badges.
+publisher_mask_icon_url: "https://example.com/mask-icon.svg"  # Single-color SVG mark (Safari pinned tab). Monochrome renderings.
+publisher_mask_icon_color: "#000000"
+publisher_brand_color: "#ffffff"     # <meta name="theme-color">.
+publisher_web_manifest_url: "https://example.com/manifest.json"  # Lists further icons and sizes.
 
 # ─── Access & retrieval (Portability Spine pt. 2) ────────────────────────
 first_accessed_at_url: "https://example.com/article"        # Required. The URL we *originally* retrieved from. Anchoring + attribution. Spine field.
