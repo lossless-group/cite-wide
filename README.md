@@ -138,6 +138,29 @@ Put the cursor on a footnote marker (`[^80nyxu]`) or on its definition line, the
 
 The canonical file adds `canonical: true`, `internal_uuid`, `reference_hexcode`, `default_slug`, `subtitle`, `authors`, `date_published`, `publisher`, `publisher_url`, `publication_type`, `first_accessed_at_url`, `date_added`, `date_recently_accessed`, `piece_og_image`, `publisher_favicon_url`, `cited_in_files`, and, when captured, `downloaded_content_path` and `source_text_path`. Promoting again is safe: `internal_uuid`, `first_accessed_at_url`, and `date_added` never change once set, and your edits in the modal always win over fetched values. Filter canonical sources in Dataview with `WHERE canonical = true`.
 
+### Commands: Enrich all citations / Enrich this citation
+
+Citation files fill in unevenly: whatever the footnote happened to contain, plus whatever an older extraction wrote, junk included. **Enrich all citations** fills in what's missing across your whole Citations folder, and shows you every change before it writes anything. **Enrich this citation** does the same for the citation under the cursor, or for the citation file you have open.
+
+1. **Finds where each citation is used.** It reads your vault once, including symlinked folders, for every `[^id]` and `[^id]:` footnote.
+2. **Reads each source**, four at a time, the same way *Promote to canonical source* does: the footnote, the page's own metadata, Jina Reader when that leaves gaps, and the publisher's homepage for brand assets. A notice shows "Enriching 12 / 70…" with a **Cancel** button.
+3. **Shows you the plan.** A modal lists each citation with changes, old → new per field, with a checkbox per citation (all on). Close it and nothing is written.
+4. **Writes only what you approve**, then saves a report to `Citations/_reports/Enrichment-<YYYY-MM-DD-HHmm>.md`: what changed (per field), dead or blocked links, citations with no footnote anywhere, and fields still empty.
+
+What it will and won't touch:
+
+| Field | Rule |
+|---|---|
+| `title`, `url`, `date`, `source`, `referenceText` | Filled when empty. A junk title ("Page not found \| MRU", "Just a moment…") counts as empty; `&rsquo;`-style entities are decoded. A real value is never overwritten. |
+| `author` | Filled when empty, or replaced when it isn't a name ("3 minutes", "Super User", sentence fragments). |
+| `authors` | Added when absent; replaced only when no entry is a name. |
+| `publisher`, `publisher_url`, `date_published`, `piece_og_image`, `publisher_*` brand fields | Added when absent; a stored value is never blanked. |
+| `filesUsedIn` | Rewritten as `[[full/path\|Alias]]` links to the notes that cite it today, so renames don't strand it. Kept when no note cites it. |
+| `date_recently_accessed` | Set when the page was read. |
+| `canonical`, everything else | Never touched. Promotion stays a deliberate act. |
+
+Running it again is safe: an enriched vault proposes no changes. A citation whose only change would be `date_recently_accessed` isn't listed or written.
+
 ***
 
 # Install
