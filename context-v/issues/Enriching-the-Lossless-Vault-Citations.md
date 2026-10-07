@@ -12,7 +12,7 @@ authors:
   - Michael Staton
 augmented_with:
   - Claude Code on Claude Opus 5.5
-at_semantic_version: 0.0.0.1
+at_semantic_version: 0.0.0.2
 site_uuid: 2e755952-4bfc-4d73-b33c-482abb3e5fa4
 hex_code: zgv6x2
 status: Resolved
@@ -69,7 +69,7 @@ No file was marked `canonical: true`; promotion stays a deliberate choice. A bac
 
 ## Still needs a human
 
-**11 orphan citation files.** These are files whose footnote definition no longer exists anywhere in the vault: the citation was inserted but never defined, or the definition was later deleted.
+**11 orphan citation files (removed 2026-10-06 at the operator's call, moved to `~/.Trash/Citations-orphans-2026-10-06/`; copies are also in the backup).** These are files whose footnote definition no longer exists anywhere in the vault: the citation was inserted but never defined, or the definition was later deleted.
 
 | File | Cited in |
 |---|---|
