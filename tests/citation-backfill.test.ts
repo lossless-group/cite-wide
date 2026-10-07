@@ -73,7 +73,7 @@ test('saving backfills an empty citation file from its footnote', async () => {
     assert.equal(fm.url, 'https://www.scribd.com/document/536774580/Battery-Ventures-OpenCloud-Report-2021');
     assert.equal(fm.usageCount, 2);
     // The new entry is a wikilink (Obsidian keeps it correct on rename); 'a.md' doesn't exist, so it stays as-is.
-    assert.deepEqual(fm.filesUsedIn, ['a.md', '[[Vocabulary/Open Source Software]]']);
+    assert.deepEqual(fm.filesUsedIn, ['a.md', '[[Vocabulary/Open Source Software|Open Source Software]]']);
 });
 
 test('saving never overwrites fields that already have values', async () => {

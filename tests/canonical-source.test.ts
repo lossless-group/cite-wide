@@ -223,7 +223,7 @@ describe('assembleCanonicalFrontmatter', () => {
             sourceFile: 'Memos/New.md',
         });
         // Legacy path entries are kept; the new entry is a wikilink, which Obsidian updates on rename.
-        const expected = ['Vocabulary/Open Source Software.md', 'Memos/Infra.md', '[[Memos/New]]'];
+        const expected = ['Vocabulary/Open Source Software.md', 'Memos/Infra.md', '[[Memos/New|New]]'];
         assert.deepEqual(fm['filesUsedIn'], expected);
         assert.deepEqual(fm['cited_in_files'], expected);
         assert.notEqual(fm['cited_in_files'], fm['filesUsedIn'], 'separate arrays, so YAML does not emit an anchor');

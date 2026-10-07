@@ -4,8 +4,14 @@
 // it never touches plain path strings. Citation files that recorded
 // `filesUsedIn: ["Vocabulary/Relational Database.md"]` went stale the moment
 // the note became "Relational Databases.md", and the citation looked orphaned.
-// Writing `[[Relational Databases]]` keeps the reference correct through
+// Writing a wikilink keeps the reference correct through
 // renames, and reads as a link in the Properties panel.
+//
+// Format follows the vault's own convention (8,090 of its 15,704 links,
+// surveyed 2026-10-06): full vault path without extension, aliased to the
+// note's display name: [[Vocabulary/Relational Databases|Relational Databases]].
+// The alias is the note's frontmatter `title` when it has one, else its
+// file name.
 //
 // Old files still hold plain paths, so every comparison treats a path and a
 // link to the same note as equal, and plain paths are upgraded to links
@@ -40,9 +46,15 @@ export interface FileLinker {
     upgrade(entry: string): string;
 }
 
+/** [[full/path|Alias]] for a vault path. */
+export function formatFileLink(path: string, alias?: string): string {
+    const target = withoutExt(path);
+    return `[[${target}|${alias?.trim() || basename(path)}]]`;
+}
+
 /** Path-only linker for code that has no App (pure assembly, tests). */
 export const plainLinker: FileLinker = {
-    link: path => `[[${withoutExt(path)}]]`,
+    link: path => formatFileLink(path),
     refersTo: (entry, path) => {
         const target = linkTextOf(entry);
         return target === withoutExt(path) || (!target.includes('/') && target === basename(path));
@@ -51,7 +63,7 @@ export const plainLinker: FileLinker = {
 };
 
 /**
- * Obsidian-aware linker: shortest unambiguous link text, and link
+ * Obsidian-aware linker: full-path links aliased to the note's title, and link
  * resolution the way Obsidian itself resolves it from `fromPath`.
  */
 export function obsidianLinker(app: App, fromPath: string): FileLinker {
@@ -61,7 +73,10 @@ export function obsidianLinker(app: App, fromPath: string): FileLinker {
     };
     const link = (path: string): string => {
         const file = fileAt(path);
-        return file ? `[[${app.metadataCache.fileToLinktext(file, fromPath, true)}]]` : plainLinker.link(path);
+        if (!file) return plainLinker.link(path);
+        const fm: Record<string, unknown> | undefined = app.metadataCache.getFileCache(file)?.frontmatter;
+        const title = fm?.['title'];
+        return formatFileLink(file.path, typeof title === 'string' ? title : undefined);
     };
     return {
         link,
@@ -70,9 +85,13 @@ export function obsidianLinker(app: App, fromPath: string): FileLinker {
             return dest ? dest.path === path : plainLinker.refersTo(entry, path);
         },
         upgrade: entry => {
-            if (isWikiLink(entry)) return entry;
-            const file = fileAt(entry.trim()) ?? app.metadataCache.getFirstLinkpathDest(linkTextOf(entry), fromPath);
-            return file ? link(file.path) : entry;
+            // Bare links and plain paths become [[full/path|Alias]]; an entry already
+            // in that form (a full path with an alias) is left exactly as written.
+            const target = linkTextOf(entry);
+            const file = fileAt(entry.trim()) ?? app.metadataCache.getFirstLinkpathDest(target, fromPath);
+            if (!file) return entry;
+            if (isWikiLink(entry) && entry.includes('|') && target === withoutExt(file.path)) return entry;
+            return link(file.path);
         },
     };
 }
