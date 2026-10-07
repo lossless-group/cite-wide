@@ -4,7 +4,7 @@
 
 An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into stable hex identifiers that survive reorderings, logs each citation into a per-citation file for Bases/Dataview queries, dedupes citations that point at the same URL, and parses pasted research output from Perplexity / Google AI / Claude into the same canonical format on the way in.
 
-> **New in 0.3.0:** Cite Wide's settings now appear in Obsidian's settings search, and every command and button reads in sentence case. Requires Obsidian 1.13 or later. [Release notes →](changelog/releases/0.3.0.md)
+> **New in 0.3.0:** every citation is visible to the plugin again (98% were being missed); **Promote to canonical source** keeps key sources (PDF + full text) in your vault; **Enrich citations** fills in authors, dates, publishers, and logos, with a review before every write; settings are searchable. Requires Obsidian 1.13 or later. [Release notes →](changelog/releases/0.3.0.md)
 
 ![Cite Wide demo — pasting an LLM research dump and watching every numeric citation convert to a stable hex marker on insert](https://ik.imagekit.io/xvpgfijuw/Image-Gin/2026-05/2026-05-17_Cite-Wide-_Paste-LLM_11.19.51_PM_HU9D8KUp-.webp)
 
@@ -267,10 +267,11 @@ See `examples/dataview-citations-examples.md` for comprehensive Dataview query e
 
 **0.3.0** — 2026-10-06 · requires Obsidian 1.13
 
-- Settings tab rebuilt on Obsidian 1.13's declarative settings API: every setting is searchable from Obsidian's settings search, and Obsidian draws the tab itself.
-- Command names, buttons, and modal titles in sentence case. Command IDs are unchanged, so your hotkeys keep working.
-- Lint now runs the Obsidian review bot's own rules; modal styling moved from inline styles into `styles.css`.
-- First automated test suite, including a guard that every command registers on load.
+- **Fixed:** citations with IDs using letters past "f" (about 98% of them) were invisible to Show citations, Save all, and the conversion commands; empty citation files are now filled from their footnotes.
+- **Promote to canonical source:** a full citation record, plus the source file and its text, saved into the vault.
+- **Enrich all citations / Enrich this citation:** fill in titles, authors, dates, publishers, and brand assets, with a review step before any write and a report note after.
+- "Cited in" (`filesUsedIn`) is stored as `[[path|Title]]` wikilinks that survive renames; a new `date_fetched` field records when each source was last fetched.
+- Settings rebuilt on Obsidian 1.13's declarative API, so every setting is searchable.
 - Full notes: [`changelog/releases/0.3.0.md`](changelog/releases/0.3.0.md).
 
 **0.2.3** — 2026-05-18 · every release asset cryptographically attested. [Notes](changelog/releases/0.2.3.md).
