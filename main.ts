@@ -29,11 +29,24 @@ import {
 } from './src/services/canonicalSourceService';
 import type { BrandAssets, DirectFetchResult } from './src/services/directFetchService';
 import { isRecord } from './src/utils/coerce';
+import { EnrichCitationsModal, EnrichProgressNotice } from './src/modals/EnrichCitationsModal';
+import { renderEnrichmentReport, type CitationPlan } from './src/services/enrichCitationsService';
+import {
+    applyEnrichment,
+    citationTarget,
+    isCitationFilePath,
+    listCitationTargets,
+    planEnrichment,
+    runTimestamps,
+    writeEnrichmentReport,
+    type CitationTarget,
+} from './src/services/enrichCitationsRunner';
 
 export default class CiteWidePlugin extends Plugin {
     // Obsidian 1.13 declares `settings?: unknown` on Plugin; initialize here
     // so the field is typed and never undefined before loadSettings() runs.
     settings: CiteWideSettings = { ...DEFAULT_SETTINGS };
+    private enrichRunning = false;
 
     async onload(): Promise<void> {
         // Load settings
@@ -53,6 +66,7 @@ export default class CiteWidePlugin extends Plugin {
         this.registerCitationFormattingCommands();
         this.registerUrlCitationCommands();
         this.registerCanonicalSourceCommands();
+        this.registerEnrichCommands();
         
         // Add settings tab
         this.addSettingTab(new CiteWideSettingTab(this.app, this));
@@ -717,6 +731,98 @@ export default class CiteWidePlugin extends Plugin {
             } finally {
                 working?.hide();
             }
+        }).open();
+    }
+
+    private registerEnrichCommands(): void {
+        this.addCommand({
+            id: 'enrich-all-citations',
+            name: 'Enrich all citations',
+            callback: () => {
+                const folder = citationFileService.getCitationsFolder();
+                void this.enrichCitations(listCitationTargets(this.app, folder), folder);
+            }
+        });
+        this.addCommand({
+            id: 'enrich-this-citation',
+            name: 'Enrich this citation',
+            callback: () => {
+                const folder = citationFileService.getCitationsFolder();
+                const target = this.currentCitationTarget(folder);
+                if (target) void this.enrichCitations([target], folder);
+            }
+        });
+    }
+
+    /**
+     * The citation under the cursor (`[^id]` or `[^id]:`), else the open file
+     * when it lives in the citations folder. Says why when there is none.
+     */
+    private currentCitationTarget(folder: string): CitationTarget | null {
+        const editor = this.app.workspace.activeEditor?.editor;
+        if (editor) {
+            const cursor = editor.getCursor();
+            const hexId = findCitationIdAtCursor(editor.getLine(cursor.line), cursor.ch);
+            if (hexId) {
+                const file = this.app.vault.getAbstractFileByPath(`${folder}/${hexId}.md`);
+                if (file instanceof TFile) return citationTarget(this.app, file);
+                new Notice(`[^${hexId}] has no citation file in ${folder}. Save it first with "Save all hex citations to citation files".`);
+                return null;
+            }
+        }
+        const active = this.app.workspace.getActiveFile();
+        if (active && isCitationFilePath(active.path, folder)) return citationTarget(this.app, active);
+        new Notice(`Place the cursor on a footnote marker like [^abc123], or open a citation file in ${folder}.`);
+        return null;
+    }
+
+    /**
+     * "Enrich all citations" / "Enrich this citation"
+     * (context-v/specs/Enrich-Citations.md): fetch and plan with a progress
+     * notice that can cancel, review in a modal, and only on Apply write the
+     * approved changes and a report note.
+     */
+    private async enrichCitations(targets: CitationTarget[], folder: string): Promise<void> {
+        if (targets.length === 0) {
+            new Notice(`No citation files found in ${folder}.`);
+            return;
+        }
+        if (this.enrichRunning) {
+            new Notice('An enrichment run is already in progress.');
+            return;
+        }
+        this.enrichRunning = true;
+        const signal = { cancelled: false };
+        const progress = new EnrichProgressNotice(() => { signal.cancelled = true; });
+        let plans: CitationPlan[] | null;
+        try {
+            plans = await planEnrichment(this.app, targets, {
+                folder,
+                today: runTimestamps().day,
+                signal,
+                onProgress: (done, total) => progress.update(done, total),
+            });
+        } catch (error) {
+            console.error('Cite Wide: enrichment failed.', error);
+            new Notice(`Enrichment failed: ${error instanceof Error ? error.message : String(error)}`);
+            return;
+        } finally {
+            progress.hide();
+            this.enrichRunning = false;
+        }
+        if (!plans) {
+            new Notice('Enrichment cancelled. Nothing was written.');
+            return;
+        }
+
+        const reportFolder = `${folder}/_reports`;
+        new EnrichCitationsModal(this.app, plans, reportFolder, async approved => {
+            const applied = await applyEnrichment(this.app, approved);
+            const time = runTimestamps();
+            const report = await writeEnrichmentReport(this.app, folder, time.stamp,
+                renderEnrichmentReport({ generatedAt: time.display, plans, applied }));
+            const changed = [...applied.values()].filter(c => c.length > 0).length;
+            new Notice(`Enriched ${changed} citation${changed === 1 ? '' : 's'}. Report: ${report.path}`, 8000);
         }).open();
     }
 

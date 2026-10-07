@@ -316,3 +316,97 @@ describe('renderEnrichmentReport', () => {
         assert.match(md, /None\./);
     });
 });
+
+describe('the runner, over a stub vault with a stubbed requestUrl', () => {
+    interface StubFile { path: string; basename: string; extension: string }
+    function stubApp(files: Record<string, { fm?: Record<string, unknown>; content: string }>) {
+        const tfiles = Object.keys(files).map(path => Object.assign(new TFile(), {
+            path, extension: 'md', basename: path.split('/').pop()!.replace(/\.md$/, ''),
+        }) as TFile & StubFile);
+        const created: Record<string, string> = {};
+        const folders: string[] = [];
+        const app = {
+            vault: {
+                getMarkdownFiles: () => tfiles,
+                cachedRead: (f: TFile) => Promise.resolve(files[f.path]!.content),
+                getAbstractFileByPath: (p: string) => tfiles.find(f => f.path === p) ?? (folders.includes(p) || created[p] !== undefined ? {} : null),
+                createFolder: (p: string) => { folders.push(p); return Promise.resolve(); },
+                create: (p: string, text: string) => { created[p] = text; return Promise.resolve(Object.assign(new TFile(), { path: p })); },
+            },
+            metadataCache: {
+                getFileCache: (f: TFile) => ({ frontmatter: files[f.path]?.fm }),
+                getFirstLinkpathDest: () => null,
+            },
+            fileManager: {
+                processFrontMatter: (f: TFile, fn: (fm: Record<string, unknown>) => void) => {
+                    const entry = files[f.path]!;
+                    entry.fm = entry.fm ?? {};
+                    fn(entry.fm);
+                    return Promise.resolve();
+                },
+            },
+        } as unknown as App;
+        return { app, files, created };
+    }
+
+    test('plans every citation, applies only approved changes, and writes the report under _reports', async () => {
+        const { planEnrichment, applyEnrichment, listCitationTargets, writeEnrichmentReport } = await import('../src/services/enrichCitationsRunner');
+        const requested: string[] = [];
+        (globalThis as { __requestUrl?: (r: { url: string }) => unknown }).__requestUrl = req => {
+            requested.push(req.url);
+            return { status: 404, headers: {}, text: '', json: null, arrayBuffer: new ArrayBuffer(0) };
+        };
+        try {
+            const { app, files, created } = stubApp({
+                'Citations/80nyxu.md': { fm: { hexId: '80nyxu', title: '', author: '', url: '', canonical: false }, content: '' },
+                'Citations/yxqi06.md': { fm: { hexId: 'yxqi06', title: 'ChromaDB' }, content: '' },
+                'Citations/_reports/Enrichment-old.md': { content: '' },
+                'Vocabulary/Open Source Software.md': { content: `Open clouds.[^80nyxu]\n\n${OPENCLOUD}\n` },
+            });
+            const targets = listCitationTargets(app, 'Citations');
+            assert.deepEqual(targets.map(t => t.hexId), ['80nyxu', 'yxqi06']);
+
+            const progress: string[] = [];
+            const plans = await planEnrichment(app, targets, {
+                folder: 'Citations', today: TODAY, signal: { cancelled: false },
+                onProgress: (d, t) => progress.push(`${d}/${t}`),
+            });
+            assert.ok(plans);
+            assert.equal(progress.at(-1), '2/2');
+            const [opencloud, chroma] = plans;
+            assert.equal(opencloud!.url, OPENCLOUD_URL);
+            assert.equal(opencloud!.tier1Ok, false);
+            assert.ok(hasRealChanges(opencloud!.changes));
+            assert.equal(chroma!.url, undefined);
+            assert.ok(requested.length > 0, 'the URL was fetched through requestUrl');
+            // Planning writes nothing.
+            assert.equal(files['Citations/80nyxu.md']!.fm!['title'], '');
+
+            const applied = await applyEnrichment(app, [opencloud!]);
+            assert.equal(files['Citations/80nyxu.md']!.fm!['title'], 'State of the OpenCloud 2021');
+            assert.equal(files['Citations/80nyxu.md']!.fm!['canonical'], false);
+            assert.equal(files['Citations/yxqi06.md']!.fm!['author'], undefined);
+
+            const report = await writeEnrichmentReport(app, 'Citations', '2026-10-06-1405',
+                renderEnrichmentReport({ generatedAt: '2026-10-06 14:05', plans, applied }));
+            assert.equal(report.path, 'Citations/_reports/Enrichment-2026-10-06-1405.md');
+            assert.match(created[report.path]!, /\| title \| 1 \|/);
+            assert.match(created[report.path]!, /yxqi06\|yxqi06\]\]: not cited/);
+            const again = await writeEnrichmentReport(app, 'Citations', '2026-10-06-1405', 'x');
+            assert.equal(again.path, 'Citations/_reports/Enrichment-2026-10-06-1405-2.md');
+        } finally {
+            delete (globalThis as { __requestUrl?: unknown }).__requestUrl;
+        }
+    });
+
+    test('cancel stops before the review step', async () => {
+        const { planEnrichment, listCitationTargets } = await import('../src/services/enrichCitationsRunner');
+        const { app } = stubApp({ 'Citations/a1.md': { fm: { hexId: 'a1' }, content: '' }, 'Citations/b2.md': { fm: { hexId: 'b2' }, content: '' } });
+        const signal = { cancelled: false };
+        const plans = await planEnrichment(app, listCitationTargets(app, 'Citations'), {
+            folder: 'Citations', today: TODAY, signal, concurrency: 1,
+            onProgress: d => { if (d === 1) signal.cancelled = true; },
+        });
+        assert.equal(plans, null);
+    });
+});

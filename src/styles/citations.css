@@ -570,3 +570,101 @@
 .cite-wide-modal .cite-wide-paste-btn.mod-cta {
     font-weight: 500;
 }
+
+/* Enrich citations: review modal and progress notice */
+
+.cite-wide-modal.cite-wide-enrich .cite-wide-enrich-summary {
+    margin: 0 0 0.75rem;
+    color: var(--text-muted);
+}
+
+.cite-wide-modal.cite-wide-enrich .cite-wide-all-label {
+    margin-bottom: 0.5rem;
+}
+
+.cite-wide-enrich-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+}
+
+.cite-wide-enrich-citation {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    background: var(--background-primary);
+}
+
+.cite-wide-enrich-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-bottom: 0.35rem;
+}
+
+.cite-wide-enrich-id {
+    font-family: var(--font-monospace);
+    font-weight: 600;
+}
+
+.cite-wide-enrich-title {
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.cite-wide-enrich-changes {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.cite-wide-enrich-changes td {
+    padding: 0.2rem 0.4rem;
+    vertical-align: top;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.cite-wide-enrich-key {
+    font-family: var(--font-monospace);
+    white-space: nowrap;
+    width: 1%;
+}
+
+.cite-wide-enrich-values {
+    overflow-wrap: anywhere;
+}
+
+.cite-wide-enrich-old {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.cite-wide-enrich-arrow {
+    color: var(--text-faint);
+}
+
+.cite-wide-enrich-new {
+    color: var(--text-normal);
+}
+
+.cite-wide-enrich-reason {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+}
+
+.cite-wide-enrich-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cite-wide-enrich-cancel {
+    flex-shrink: 0;
+}
