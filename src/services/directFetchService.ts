@@ -82,7 +82,7 @@ const NAMED_ENTITIES: Record<string, string> = {
     uacute: '\u00FA', ntilde: '\u00F1', ccedil: '\u00E7', uuml: '\u00FC', ouml: '\u00F6', auml: '\u00E4', szlig: '\u00DF',
 };
 
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
     return s
         .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? m)
         .replace(/&amp;/g, '&')
