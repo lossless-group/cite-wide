@@ -66,3 +66,12 @@ test('named HTML entities are decoded', () => {
     assert.equal(r.title, 'What BMW’s Corporate VC Offers — a look');
     assert.equal(parseDirectFetchHtml('<title>Tom &amp;amp; Jerry</title>', 'https://x.example/').title, 'Tom &amp; Jerry', 'double-escaped stays single-escaped');
 });
+
+test('a citation marker inside the link text does not break footnote parsing', async () => {
+    // tl0qr5 in the vault.
+    const { parseFootnote } = await import('../src/services/canonicalSourceService');
+    const p = parseFootnote('[^tl0qr5]: 2025, Mar. "[12 Tips for Effective Communication in the Workplace [^o7r24s] • Asana](https://asana.com/resources/effective-communication-workplace)". [Asana](https://asana.com).');
+    assert.equal(p.url, 'https://asana.com/resources/effective-communication-workplace');
+    assert.match(p.title ?? '', /^12 Tips for Effective Communication in the Workplace/);
+    assert.deepEqual(p.authors, []);
+});

@@ -182,21 +182,24 @@ export function parseFootnote(line: string): ParsedFootnote {
 
     let prefix = '';
     let suffix = '';
-    const link = /"?\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)"?/.exec(body);
-    const quoted = /"([^"]+)"|“([^”]+)”/.exec(body);
+    // A stray citation marker inside the link text ("[Title [^o7r24s] • Site](url)",
+    // seen in the vault) breaks the link match; parse without inner markers.
+    const scan = body.replace(/\s*\[\^[a-z0-9]+\]/gi, '');
+    const link = /"?\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)"?/.exec(scan);
+    const quoted = /"([^"]+)"|“([^”]+)”/.exec(scan);
     if (link) {
         result.title = stripTitleQuotes(link[1] ?? '').replace(/\s+\|\s+[^|]+$/, '') || undefined;
         result.url = link[2];
-        prefix = body.slice(0, link.index);
-        suffix = body.slice(link.index + link[0].length);
+        prefix = scan.slice(0, link.index);
+        suffix = scan.slice(link.index + link[0].length);
     } else if (quoted) {
         const inner = (quoted[1] ?? quoted[2] ?? '').trim();
         if (isUrl(inner)) {
             result.url = inner;
         } else {
             result.title = stripTitleQuotes(inner) || undefined;
-            prefix = body.slice(0, quoted.index);
-            suffix = body.slice(quoted.index + quoted[0].length);
+            prefix = scan.slice(0, quoted.index);
+            suffix = scan.slice(quoted.index + quoted[0].length);
         }
     }
     if (!result.url) {
@@ -240,6 +243,8 @@ export function parseFootnote(line: string): ParsedFootnote {
         publisherCandidates.push(segment);
     }
     result.publisher = publisherCandidates[publisherCandidates.length - 1];
+    // An author is a name, never a link, a URL, or a citation marker.
+    result.authors = result.authors.filter(a => !/\]\(|https?:\/\/|\[\^/.test(a));
     return result;
 }
 
