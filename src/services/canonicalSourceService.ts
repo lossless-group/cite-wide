@@ -131,32 +131,8 @@ function sentenceSegments(text: string): string[] {
  * Commas separate only when every part is a multi-word name, so
  * "Thiel, Peter" stays one author while "Peter Thiel, Blake Masters" is two.
  */
-// Lowercase words allowed inside a personal or organizational name.
-const NAME_PARTICLES = /^(de|da|das|do|dos|del|della|di|du|van|von|der|den|ter|le|la|les|bin|binti|al|el|y|e|and|of|the|for|&)$/i;
-// Placeholder bylines content systems emit when no author is set.
-const PLACEHOLDER_AUTHORS = /^(super ?user|admin(istrator)?|guest|staff|editor(ial)?( team)?|unknown|anonymous|author|user|contributor|webmaster|team)$/i;
-
-/**
- * True when a string is shaped like a person or organization name. Rejects
- * what stored and fetched "authors" in the lossless vault turned out to be
- * (2026-10-06): reading times ("3 minutes", "over 4"), sentence fragments
- * ("completing the action below.", "a multi-model database."), lowercase
- * phrases ("training data"), markdown links and URLs, and CMS placeholders
- * ("Super User").
- */
-export function isPlausibleAuthor(name: string | undefined): boolean {
-    const t = name?.trim() ?? '';
-    if (!t) return false;
-    if (/^\[\[[^\]]+\]\]$/.test(t)) return true;
-    if (/\]\(|https?:\/\/|\[\^|[<>{}|]/.test(t)) return false;
-    if (/[\d?!;:%()\u201C\u201D"]/.test(t)) return false;
-    if (/\.$/.test(t) && !/(^|\s)\p{Lu}\.$/u.test(t)) return false;
-    if (PLACEHOLDER_AUTHORS.test(t)) return false;
-    const words = t.split(/\s+/);
-    if (words.length > 6) return false;
-    if (!/^[\p{Lu}\p{Lt}]/u.test(t)) return false;
-    return words.every(w => !/^\p{Ll}/u.test(w) || NAME_PARTICLES.test(w));
-}
+export { isPlausibleAuthor } from '../utils/authorNames';
+import { isPlausibleAuthor } from '../utils/authorNames';
 
 export function splitAuthors(segment: string): string[] {
     const s = segment
@@ -520,8 +496,10 @@ export interface PrefillInput {
  * forums, and reports published under a firm's name all land here. Wikipedia
  * is credited to "Wikipedia contributors".
  */
-function withGroupAuthor(url: string, publisher: string, authors: string[]): string[] {
+function withGroupAuthor(url: string, publisher: string, channel: string | null | undefined, authors: string[]): string[] {
     if (authors.length > 0) return authors;
+    // A YouTube channel name is authoritative (oEmbed), even with digits ("5 Minutes Tech").
+    if (channel?.trim()) return [channel.trim()];
     if (/(^|\.)wikipedia\.org$/i.test(hostOf(url))) return ['Wikipedia contributors'];
     const org = publisher.replace(/^\[\[(?:[^\]|]*\|)?([^\]]+)\]\]$/, '$1').trim();
     return org && !/^https?:\/\//i.test(org) ? [publisher.trim()] : [];
@@ -566,14 +544,14 @@ export function buildPrefill({ parsed, existing, tier1, tier2, channel }: Prefil
     );
     const storedType = existing['publication_type'];
 
-    const publisherName = firstText(
+    const publisherName = firstText(...[
             stored('publisher'),
             tier1?.citationPublisher,
             parsed?.publisher,
             tier1?.siteName,
             tier2?.publisher,
-            asString(existing['source']),
-        ) ?? '';
+            asString(existing['source'])
+    ].filter(isPlausibleAuthor)) ?? '';
 
     return {
         title: firstText(...[
@@ -586,14 +564,13 @@ export function buildPrefill({ parsed, existing, tier1, tier2, channel }: Prefil
             asString(existing['title']),
         ].map(t => (isJunkTitle(t) ? undefined : t))) ?? '',
         subtitle: stored('subtitle') ?? '',
-        authors: withGroupAuthor(url, publisherName, firstList(
+        authors: withGroupAuthor(url, publisherName, channel, firstList(
             canon ? asStringArray(existing['authors']) : [],
             scholarly ? tier1?.authors ?? [] : [],
             parsed?.authors ?? [],
             tier1?.authors ?? [],
             tier2?.authors ?? [],
             lightAuthor ? splitAuthors(lightAuthor) : [],
-            channel ? [channel] : [],
         )),
         datePublished: date ? normalizeDatePublished(date) ?? date : '',
         publisher: publisherName,

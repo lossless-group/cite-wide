@@ -48,3 +48,23 @@ test('no person credited: the organization is the group author; Wikipedia is "Wi
     const person = buildPrefill({ parsed: null, existing: { url: U, author: 'Jane Doe', source: 'Acme' }, tier1: null, tier2: null });
     assert.deepEqual(person.authors, ['Jane Doe'], 'a credited person always wins over the organization');
 });
+
+test('a junk publisher is never promoted to group author', () => {
+    for (const junk of ['training data', '1 minute', 'Devrev.Published: 2025-05-28 | Updated: 2025-06-03', 'Published: 2021-03-21 | Updated: 2025-04-04']) {
+        const pre = buildPrefill({ parsed: null, existing: { url: U, source: junk }, tier1: null, tier2: null });
+        assert.deepEqual(pre.authors, [], junk);
+        assert.equal(pre.publisher, '', junk);
+    }
+    const wiki = buildPrefill({ parsed: null, existing: { url: U, source: '[[Sources/Media/Harvard Business Review|Harvard Business Review]]' }, tier1: null, tier2: null });
+    assert.deepEqual(wiki.authors, ['[[Sources/Media/Harvard Business Review|Harvard Business Review]]'], 'a wikilinked publisher is fine');
+});
+
+test('a YouTube channel name is trusted even with digits', () => {
+    const pre = buildPrefill({ parsed: null, existing: { url: 'https://youtu.be/lL_j7ilk7rc', source: '[[YouTube]]' }, tier1: null, tier2: null, channel: '5 Minutes Tech' });
+    assert.deepEqual(pre.authors, ['5 Minutes Tech']);
+});
+
+test('a junk meta author does not shadow a real byline element (Deloitte)', () => {
+    const html = '<meta name="author" content="changing demand as the learning needs"><span class="byline">By</span><span class="byline__name">Maggie Wooll</span>';
+    assert.deepEqual(parseDirectFetchHtml(html, U).authors, ['Maggie Wooll']);
+});

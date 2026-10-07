@@ -13,6 +13,7 @@
 //   - 4-space indentation and noUncheckedIndexedAccess-safe callbacks.
 
 import { requestUrl } from 'obsidian';
+import { isPlausibleAuthor } from '../utils/authorNames';
 
 export interface DirectFetchResult {
     /** og:title, then twitter:title, citation_title, <title>; '' when none. */
@@ -413,13 +414,16 @@ export function parseDirectFetchHtml(html: string, url: string): ParsedHtmlMeta 
     // Fallback order, from probing 40 author-less citations (2026-10-06):
     // JSON-LD carried the byline on 15 (DevRev, Figma, HBR, LinkedIn, dev.to…)
     // that have no author meta tag; a few expose it only in a visible byline.
+    // Each source is filtered before choosing, so a junk meta author can't
+    // shadow a real byline further down (Deloitte).
+    const plausible = (list: string[]): string[] => list.filter((a) => isPlausibleAuthor(a.replace(/,/g, ' ')));
     const authors = firstNonEmpty(
         citationAuthors,
-        jsonLdAuthors(html),
-        getMetaAll(html, 'name', 'author'),
-        getMetaAll(html, 'property', 'article:author'),
-        twitterWrittenBy(html),
-        bylineElements(html)
+        plausible(jsonLdAuthors(html)),
+        plausible(getMetaAll(html, 'name', 'author')),
+        plausible(getMetaAll(html, 'property', 'article:author')),
+        plausible(twitterWrittenBy(html)),
+        plausible(bylineElements(html))
     )
         // `article:author` is frequently a profile URL rather than a name.
         .filter((value) => !/^https?:\/\//i.test(value))
