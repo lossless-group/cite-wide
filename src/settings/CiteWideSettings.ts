@@ -1,6 +1,7 @@
 // cite-wide/src/settings/CiteWideSettings.ts
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import CiteWidePlugin from '../../main';
+import type { App, SettingDefinitionItem } from 'obsidian';
+import { PluginSettingTab } from 'obsidian';
+import type CiteWidePlugin from '../../main';
 import { urlCitationService } from '../services/urlCitationService';
 import { citationFileService } from '../services/citationFileService';
 
@@ -16,6 +17,16 @@ export const DEFAULT_SETTINGS: CiteWideSettings = {
     autoSaveUrlCitations: false
 };
 
+type SettingKey = keyof CiteWideSettings;
+
+function isSettingKey(key: string): key is SettingKey {
+    return Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, key);
+}
+
+// Built on Obsidian 1.13's declarative settings API: Obsidian renders these
+// definitions and indexes them for settings search. There is no display()
+// override. Controls bind to top-level keys of plugin.settings via
+// getControlValue / setControlValue below.
 export class CiteWideSettingTab extends PluginSettingTab {
     plugin: CiteWidePlugin;
 
@@ -24,71 +35,80 @@ export class CiteWideSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-
-        containerEl.createEl('h2', { text: 'Cite Wide Settings' });
-
-        // Jina.ai API Key setting
-        new Setting(containerEl)
-            .setName('Jina.ai API Key (Optional)')
-            .setDesc('Enter your Jina.ai API key to avoid rate limits. Get your key from https://jina.ai/. Leave empty to use without authentication.')
-            .addText(text => text
-                .setPlaceholder('Enter your API key (optional)')
-                .setValue(this.plugin.settings.jinaApiKey)
-                .onChange(async (value) => {
-                    this.plugin.settings.jinaApiKey = value;
-                    urlCitationService.setApiKey(value);
-                    await this.plugin.saveSettings();
-                }));
-
-        // Citations folder setting
-        new Setting(containerEl)
-            .setName('Citations Folder')
-            .setDesc('Folder where citation files will be stored for Dataview integration.')
-            .addText(text => text
-                .setPlaceholder('Citations')
-                .setValue(this.plugin.settings.citationsFolder)
-                .onChange(async (value) => {
-                    this.plugin.settings.citationsFolder = value;
-                    citationFileService.setCitationsFolder(value);
-                    await this.plugin.saveSettings();
-                }));
-
-        // Auto-save URL citations setting
-        new Setting(containerEl)
-            .setName('Auto-save URL Citations')
-            .setDesc('Automatically save citations extracted from URLs as citation files in the Citations folder. When off (default), URL extracts only update the document — use the "Save All Hex Citations" command or the per-citation Save button in the Citations modal to canonicalize specific citations.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.autoSaveUrlCitations)
-                .onChange(async (value) => {
-                    this.plugin.settings.autoSaveUrlCitations = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        // Status message
-        containerEl.createEl('div', { 
-            cls: 'setting-item-description',
-            text: this.plugin.settings.jinaApiKey 
-                ? '✅ API key configured - URL citation extraction with rate limit protection'
-                : '⚠️ No API key configured - URL citation extraction works but may hit rate limits'
-        });
-
-        // Instructions
-        containerEl.createEl('h3', { text: 'How to Use URL Citation Extraction' });
-        
-        const instructionsEl = containerEl.createEl('div', { cls: 'setting-item-description' });
-        instructionsEl.innerHTML = `
-            <ol>
-                <li>Highlight a URL in your document</li>
-                <li>Run the "Extract Citation from URL" command (Ctrl/Cmd + P)</li>
-                <li>The URL will be replaced with a citation reference like <code>[^a1b2c3]</code></li>
-                <li>A properly formatted citation will be added to the Footnotes section</li>
-            </ol>
-            <p><strong>Example:</strong></p>
-            <p>URL: <code>https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/</code></p>
-            <p>Becomes: <code>[^1b34df]: 2022, Mar. "[Originals, by Adam Grant | Bob's Books](https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/)" Bob Holfeld. [Bob's Been Reading](https://bobsbeenreading.com/).</code></p>
-        `;
+    getControlValue(key: string): unknown {
+        return isSettingKey(key) ? this.plugin.settings[key] : undefined;
     }
-} 
+
+    async setControlValue(key: string, value: unknown): Promise<void> {
+        const settings = this.plugin.settings;
+        switch (key) {
+            case 'jinaApiKey': {
+                const apiKey = typeof value === 'string' ? value : '';
+                settings.jinaApiKey = apiKey;
+                urlCitationService.setApiKey(apiKey);
+                break;
+            }
+            case 'citationsFolder': {
+                const folder = typeof value === 'string' ? value : '';
+                settings.citationsFolder = folder;
+                citationFileService.setCitationsFolder(folder);
+                break;
+            }
+            case 'autoSaveUrlCitations':
+                settings.autoSaveUrlCitations = value === true;
+                break;
+            default:
+                return;
+        }
+        await this.plugin.saveSettings();
+        // The API key status rows' `visible` predicates depend on the key.
+        // refreshDomState() toggles them in place without a re-render, so
+        // typing in the key field keeps focus.
+        if (key === 'jinaApiKey') this.refreshDomState();
+    }
+
+    getSettingDefinitions(): SettingDefinitionItem[] {
+        const hasApiKey = () => this.plugin.settings.jinaApiKey.trim().length > 0;
+        return [
+            {
+                name: 'Jina.ai API key (optional)',
+                desc: 'Enter your Jina.ai API key to avoid rate limits. Get your key from https://jina.ai/. Leave empty to use without authentication.',
+                control: { type: 'text', key: 'jinaApiKey', placeholder: 'Enter your API key (optional)' },
+            },
+            {
+                name: 'API key status',
+                desc: '✅ API key configured - URL citation extraction with rate limit protection',
+                visible: hasApiKey,
+            },
+            {
+                name: 'API key status',
+                desc: '⚠️ No API key configured - URL citation extraction works but may hit rate limits',
+                visible: () => !hasApiKey(),
+            },
+            {
+                name: 'Citations folder',
+                desc: 'Folder where citation files will be stored for Dataview integration.',
+                control: { type: 'text', key: 'citationsFolder', placeholder: 'Citations' },
+            },
+            {
+                name: 'Auto-save URL citations',
+                desc: 'Automatically save citations extracted from URLs as citation files in the citations folder. When off (default), URL extracts only update the document. Use the "Save all hex citations to citation files" command or the per-citation save button in the citations modal to canonicalize specific citations.',
+                control: { type: 'toggle', key: 'autoSaveUrlCitations' },
+            },
+            {
+                type: 'group',
+                heading: 'How to use URL citation extraction',
+                items: [
+                    { name: '1. Highlight a URL', desc: 'Select a URL in your document.' },
+                    { name: '2. Run the command', desc: 'Run "Extract citation from URL" from the command palette (Ctrl/Cmd + P).' },
+                    { name: '3. The URL becomes a reference', desc: 'The URL is replaced with a citation reference like [^a1b2c3].' },
+                    { name: '4. The citation is added', desc: 'A properly formatted citation is added to the footnotes section.' },
+                    {
+                        name: 'Example',
+                        desc: 'URL: https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/ becomes: [^1b34df]: 2022, Mar. "[Originals, by Adam Grant | Bob\'s Books](https://bobsbeenreading.com/2016/05/08/originals-by-adam-grant/)" Bob Holfeld. [Bob\'s Been Reading](https://bobsbeenreading.com/).',
+                    },
+                ],
+            },
+        ];
+    }
+}

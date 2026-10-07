@@ -23,6 +23,7 @@ interface Def {
     control?: { type: string; key: string; options?: Record<string, string> };
     render?: unknown;
     items?: Def[];
+    visible?: boolean | (() => boolean);
 }
 
 type Tab = {
@@ -95,11 +96,17 @@ describe('declarative settings tab (Obsidian ≥ 1.13)', () => {
     });
 
     test('API key status reflects whether a key is set', () => {
+        // Only rows Obsidian would render count: evaluate `visible`.
+        const shown = (d: Def) => d.visible === undefined || (typeof d.visible === 'function' ? d.visible() : d.visible);
         const status = (overrides: Partial<CiteWideSettings>) => walk(makeTab(overrides).tab.getSettingDefinitions())
-            .map(d => `${d.name ?? ''} ${typeof d.desc === 'string' ? d.desc : ''}`)
-            .join('\n');
-        assert.match(status({ jinaApiKey: '' }), /no API key configured/i);
-        assert.match(status({ jinaApiKey: 'jina_test' }), /API key configured/i);
+            .filter(d => norm(d.name ?? '') === 'api key status' && shown(d))
+            .map(d => (typeof d.desc === 'string' ? d.desc : ''));
+        const without = status({ jinaApiKey: '' });
+        const withKey = status({ jinaApiKey: 'jina_test' });
+        assert.equal(without.length, 1);
+        assert.equal(withKey.length, 1);
+        assert.match(without[0]!, /no API key configured/i);
+        assert.match(withKey[0]!, /^\W*API key configured/i);
     });
 
     test('every item is searchable: non-empty name; groups are not empty', () => {
