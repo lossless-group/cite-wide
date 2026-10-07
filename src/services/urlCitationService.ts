@@ -12,6 +12,16 @@ export interface CitationData {
     siteName?: string | undefined;
 }
 
+/** The fields of a Jina Reader JSON response that cite-wide reads. */
+export interface ReaderResult {
+    title: string | undefined;
+    author: string | undefined;
+    siteName: string | undefined;
+    publishedTime: string | undefined;
+    /** The page or document text, as markdown. */
+    content: string | undefined;
+}
+
 export interface UrlCitationResult {
     success: boolean;
     citation?: string;
@@ -71,6 +81,44 @@ export class UrlCitationService {
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
             };
         }
+    }
+
+    /**
+     * Read a URL through Jina Reader and return its metadata and markdown
+     * text. Jina handles both web pages and PDFs. Returns null on any failure
+     * (rate limit, network, unparseable body) so callers can degrade.
+     */
+    public async fetchReader(url: string): Promise<ReaderResult | null> {
+        if (!this.isValidUrl(url)) return null;
+        try {
+            const response = await requestUrl({
+                url: `${this.jinaReaderUrl}${encodeURIComponent(url)}`,
+                method: 'GET',
+                headers: this.readerHeaders(),
+                throw: false,
+            });
+            if (response.status < 200 || response.status >= 300) return null;
+            const data: unknown = response.json;
+            if (!isRecord(data)) return null;
+            const root: Record<string, unknown> = isRecord(data['data']) ? data['data'] : data;
+            const meta: Record<string, unknown> = isRecord(root['metadata']) ? root['metadata'] : {};
+            return {
+                title: asString(root['title']) || asString(meta['og:title']) || undefined,
+                author: asString(meta['author']) || undefined,
+                siteName: asString(meta['og:site_name']) || undefined,
+                publishedTime: asString(root['publishedTime']) || asString(meta['article:published_time']) || undefined,
+                content: asString(root['content']) || undefined,
+            };
+        } catch (error) {
+            console.warn('Jina Reader request failed:', error);
+            return null;
+        }
+    }
+
+    private readerHeaders(): Record<string, string> {
+        const headers: Record<string, string> = { 'Accept': 'application/json' };
+        if (this.jinaApiKey) headers['Authorization'] = `Bearer ${this.jinaApiKey}`;
+        return headers;
     }
 
     /**

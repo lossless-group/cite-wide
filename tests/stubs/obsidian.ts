@@ -24,6 +24,10 @@ export interface StubResponse {
     arrayBuffer: ArrayBuffer;
 }
 
+// Plugin code uses window.setTimeout (popout-window safe, per the review
+// bot); under Node, `window` is the global object.
+(globalThis as { window?: unknown }).window ??= globalThis;
+
 type Handler = (req: StubRequest) => StubResponse | Promise<StubResponse>;
 
 export async function requestUrl(req: StubRequest): Promise<StubResponse> {
