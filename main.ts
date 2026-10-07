@@ -10,6 +10,20 @@ import { citationFileService, initializeCitationFileService, type CitationMetada
 import { LlmCitationsModal } from './src/modals/LlmCitationsModal';
 import { PasteLlmContentModal } from './src/modals/PasteLlmContentModal';
 import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
+import { PromoteCanonicalSourceModal } from './src/modals/PromoteCanonicalSourceModal';
+import {
+    buildPrefill,
+    fetchTier1,
+    fetchTier2,
+    findCitationIdAtCursor,
+    findFootnoteDefinition,
+    needsTier2,
+    parseFootnote,
+    promoteCanonicalSource,
+    type Tier2Meta,
+} from './src/services/canonicalSourceService';
+import type { DirectFetchResult } from './src/services/directFetchService';
+import { isRecord } from './src/utils/coerce';
 
 export default class CiteWidePlugin extends Plugin {
     // Obsidian 1.13 declares `settings?: unknown` on Plugin; initialize here
@@ -33,6 +47,7 @@ export default class CiteWidePlugin extends Plugin {
         this.registerReferenceCleanupCommands();
         this.registerCitationFormattingCommands();
         this.registerUrlCitationCommands();
+        this.registerCanonicalSourceCommands();
         
         // Add settings tab
         this.addSettingTab(new CiteWideSettingTab(this.app, this));
@@ -618,6 +633,82 @@ export default class CiteWidePlugin extends Plugin {
     }
     
 
+    private registerCanonicalSourceCommands(): void {
+        this.addCommand({
+            id: 'promote-to-canonical-source',
+            name: 'Promote to canonical source',
+            editorCallback: (editor: Editor) => {
+                void this.promoteToCanonicalSource(editor);
+            }
+        });
+    }
+
+    /**
+     * "Promote to canonical source" (context-v/specs/Promote-to-Canonical-Source.md):
+     * find the citation under the cursor, gather its metadata (footnote,
+     * light file, tier 1 meta tags, tier 2 Jina Reader), confirm in a modal,
+     * then capture the source and upgrade Citations/<id>.md in place.
+     */
+    private async promoteToCanonicalSource(editor: Editor): Promise<void> {
+        const cursor = editor.getCursor();
+        const hexId = findCitationIdAtCursor(editor.getLine(cursor.line), cursor.ch);
+        if (!hexId) {
+            new Notice('Place the cursor on a footnote marker like [^abc123], or on its definition line.');
+            return;
+        }
+
+        const folder = citationFileService.getCitationsFolder();
+        const definition = findFootnoteDefinition(editor.getValue(), hexId);
+        const parsed = definition ? parseFootnote(definition) : null;
+        const existingFile = this.app.vault.getAbstractFileByPath(`${folder}/${hexId}.md`);
+        const cached = existingFile instanceof TFile ? this.app.metadataCache.getFileCache(existingFile)?.frontmatter : undefined;
+        const existing: Record<string, unknown> = isRecord(cached) ? { ...cached } : {};
+
+        const url = parsed?.url ?? (typeof existing['url'] === 'string' && existing['url'] ? existing['url'] : undefined);
+        let tier1: DirectFetchResult | null = null;
+        let tier2: Tier2Meta | null = null;
+        if (url) {
+            const progress = new Notice('Reading the source\u2019s metadata\u2026', 0);
+            try {
+                tier1 = await fetchTier1(url);
+                if (needsTier2(tier1)) tier2 = await fetchTier2(url);
+            } finally {
+                progress.hide();
+            }
+        }
+
+        const prefill = buildPrefill({ parsed, existing, tier1, tier2 });
+        const sourceFile = this.app.workspace.getActiveFile()?.path;
+        new PromoteCanonicalSourceModal(this.app, hexId, prefill, async ({ form, capture }) => {
+            const working = capture && form.url.trim()
+                ? new Notice('Promoting and capturing the source\u2026', 0)
+                : null;
+            try {
+                const result = await promoteCanonicalSource(this.app, {
+                    folder,
+                    hexId,
+                    form,
+                    capture,
+                    tier1,
+                    sourceFile,
+                    referenceText: parsed?.referenceText,
+                    today: localDate(),
+                });
+                const lines = [`Promoted [^${hexId}] to a canonical source.`];
+                if (result.downloadedContentPath) lines.push(`Saved the file to ${result.downloadedContentPath}.`);
+                if (result.fileError) lines.push(`The file was not saved: ${result.fileError}.`);
+                if (result.sourceTextPath) lines.push(`Imported the text to ${result.sourceTextPath}.`);
+                if (result.textError) lines.push(`The text was not imported: ${result.textError}.`);
+                new Notice(lines.join('\n'), result.textError || result.fileError ? 10000 : 5000);
+            } catch (error) {
+                console.error('Promote to canonical source failed:', error);
+                new Notice(`Could not promote [^${hexId}]: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                working?.hide();
+            }
+        }).open();
+    }
+
     private registerLinkFormattingCommands(): void {
         // Command to format links in the selected text
         this.addCommand({
@@ -658,4 +749,10 @@ class ConfirmDuplicateCitationModal extends Modal {
                 this.close();
             });
     }
+}
+
+/** Today in the user's time zone, as YYYY-MM-DD. */
+function localDate(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

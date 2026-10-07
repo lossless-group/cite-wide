@@ -17,8 +17,9 @@ interface StubPlugin {
     onload(): Promise<void>;
 }
 
-// Every command ID main.ts registered in 0.2.3. IDs are what user hotkeys
-// bind to, so they must not change.
+// Every command ID main.ts registers: the 14 from 0.2.3, plus
+// promote-to-canonical-source (0.3.0). IDs are what user hotkeys bind to,
+// so they must not change.
 const COMMAND_IDS = [
     'show-citations',
     'dedupe-citations-by-url',
@@ -34,6 +35,7 @@ const COMMAND_IDS = [
     'lift-table-citations',
     'extract-citation-from-url',
     'format-reference-links',
+    'promote-to-canonical-source',
 ];
 
 function makePlugin(storedData: unknown = null): StubPlugin {
@@ -50,6 +52,7 @@ describe('plugin onload()', () => {
         const plugin = makePlugin();
         await plugin.onload();
         const ids = plugin.commands.map(c => c.id);
+        assert.equal(ids.length, 15);
         assert.deepEqual([...ids].sort(), [...COMMAND_IDS].sort());
         for (const c of plugin.commands) assert.ok(c.name.trim(), `command ${c.id} has no name`);
     });
