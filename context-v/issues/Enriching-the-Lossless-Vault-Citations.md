@@ -12,7 +12,7 @@ authors:
   - Michael Staton
 augmented_with:
   - Claude Code on Claude Opus 5.5
-at_semantic_version: 0.0.0.2
+at_semantic_version: 0.0.1.0
 site_uuid: 2e755952-4bfc-4d73-b33c-482abb3e5fa4
 hex_code: zgv6x2
 status: Resolved
@@ -92,9 +92,20 @@ No file was marked `canonical: true`; promotion stays a deliberate choice. A bac
 | 0040jx, o8ltr6 | Silicon Valley Invest Club posts: "Publication Not Available" |
 | 8j90if | logto.medium.com sits behind a Cloudflare bot check |
 
+## Second pass: the orphans that weren't, stale paths, and junk authors
+
+**Most of the vault is symlinks.** `Vocabulary`, `Tooling`, `projects`, `client-content`, `Sources`, `concepts` and others link into `lossless-monorepo/content/`. The search used to declare "orphans" did not follow symlinks (ugrep `-r`, and Python `os.walk` without `followlinks=True`). It saw 1,281 of 6,079 notes. Six of the eleven "orphans" had real footnotes in renamed or moved notes. They were deleted at the operator's instruction, restored from the Trash, and enriched. Only `y0ml1v`, `yxqi06`, and the three iFly topic markers (empty definitions) were truly orphaned.
+
+**Paths go stale; wikilinks don't.** `filesUsedIn` stored plain paths, and 21 citation files pointed at notes that had since been renamed or moved ("Relational Database.md" → "Relational Databases.md", "projects/Augment-It/…" → "projects/Context-Vigilance/…"). The plugin now writes `filesUsedIn` / `cited_in_files` as wikilinks, which Obsidian rewrites on rename (bc097ea). The vault's 68 resolvable citation files were migrated to wikilinks pointing at the notes that use them today.
+
+**Author is the dirtiest field.** 23 stored light authors, from older URL extraction, were not names. Examples: reading times ("3 minutes"), fragments ("completing the action below."), lowercase phrases ("training data"), link debris, and a CMS placeholder ("Super User"). Promotion now accepts only name-shaped authors and splits "X on Platform" and comma-joined bylines (1069316). In the vault, 20 junk authors were emptied and 4 replaced with real names from the page or footnote. The `authors` lists added in pass one were rewritten from the clean values. Re-running the cleanup is a verified no-op.
+
 ## Lessons for the next pass
 
 - **Treat every fetched title as suspect.** Bot checks and error pages come back as HTTP 200 with a plausible-looking title, from both direct fetches and readers like Jina.
 - **Big publishers block everyone.** The NYT, The Economist, and Scribd blocked plain fetches; Firecrawl refuses the NYT outright. For sources that matter, a direct PDF link or a built-in brand table beats scraping.
 - **The footnote is often the best source.** For blocked pages, the human-written footnote carried the correct title, date, and publisher.
 - **Never round-trip YAML.** Write line by line and assert.
+- **Follow symlinks** in any vault-wide search, and dedupe by real path.
+- **Store note references as wikilinks**, never paths: the operator renames notes often.
+- **Validate authors** like titles. A string in an author field is not evidence of a name.
