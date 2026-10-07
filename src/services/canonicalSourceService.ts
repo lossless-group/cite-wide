@@ -671,8 +671,13 @@ export function assembleCanonicalFrontmatter(existing: Record<string, unknown>, 
     fm['publication_type'] = form.publicationType;
     setOrDrop('first_accessed_at_url', asString(existing['first_accessed_at_url']) || url);
     fm['date_added'] = asDateText(existing['date_added']) ?? ctx.today;
-    if (fetched) fm['date_recently_accessed'] = ctx.today;
-    if (ctx.fetchedAt) fm['date_fetched'] = ctx.fetchedAt;
+    // One fetch-time field. date_recently_accessed was the same thing under an
+    // older name; it is replaced when the citation is promoted.
+    const fetchedAt = ctx.fetchedAt ?? (fetched ? now : undefined);
+    if (fetchedAt) {
+        fm['date_fetched'] = fetchedAt;
+        delete fm['date_recently_accessed'];
+    }
     if (fetched?.image) fm['piece_og_image'] = fetched.image;
     // Publisher brand assets: refreshed whenever they were fetched, never blanked.
     const brand = ctx.brand ?? fetched?.brand;

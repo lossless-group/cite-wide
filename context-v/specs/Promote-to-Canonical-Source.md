@@ -71,7 +71,7 @@ The canonical file **keeps every light-format key** (`hexId`, `title`, `url`, `r
 | `publication_type` | modal |
 | `first_accessed_at_url` | the URL; write-once |
 | `date_added` | today; write-once |
-| `date_recently_accessed` | today, if the fetch succeeded |
+| `date_fetched` | ISO timestamp of the fetch, if it succeeded (replaces `date_recently_accessed`, which meant the same thing) |
 | `piece_og_image` | `og:image` |
 | `cited_in_files` | mirrors `filesUsedIn` |
 | `publisher_favicon_url` | `<link rel="icon">`: SVG first, then the largest PNG up to 96 px, else `/favicon.ico` |

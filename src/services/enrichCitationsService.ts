@@ -65,10 +65,13 @@ export interface CitationPlan {
 }
 
 /** Refreshed on every successful fetch, so it never counts as a change on its own. */
-export const ACCESS_DATE_KEY = 'date_recently_accessed';
-/** When the source was last fetched (ISO timestamp). Bookkeeping, like the access date. */
+/**
+ * When the source was last fetched (ISO timestamp). Bookkeeping: it alone
+ * never makes a citation "changed". Replaces date_recently_accessed, which
+ * meant the same thing; the operator keeps one field.
+ */
 export const FETCHED_KEY = 'date_fetched';
-const BOOKKEEPING_KEYS = new Set([ACCESS_DATE_KEY, FETCHED_KEY]);
+const BOOKKEEPING_KEYS = new Set([FETCHED_KEY]);
 
 /** The light-format fields citationFileService writes, checked by the report. */
 export const LIGHT_FIELDS = ['title', 'author', 'url', 'date', 'source', 'referenceText'] as const;
@@ -161,7 +164,7 @@ export function buildUsageIndex(notes: Iterable<NoteText>, excludeFolder?: strin
  * - authors: add when absent; replace only when no entry is a name.
  * - publisher, publisher_url, date_published, piece_og_image, publisher_*:
  *   add when absent, never blank.
- * - date_recently_accessed: set when tier 1 read the page.
+ * - date_fetched: the fetch timestamp, when tier 1 or tier 2 read the source.
  * - filesUsedIn: the notes that cite it today, as links; kept when none found.
  * - canonical and everything else: untouched.
  */
@@ -239,7 +242,6 @@ export function planCitationChanges(
         addAbsent(key, value);
     }
 
-    if (tier1) propose(ACCESS_DATE_KEY, fetched.fetchedOn, 'the page was read');
     if ((tier1 || tier2) && fetched.fetchedAt) propose(FETCHED_KEY, fetched.fetchedAt, 'when the source was fetched');
 
     // Usage, as links Obsidian keeps correct through renames.
@@ -254,7 +256,7 @@ export function planCitationChanges(
     return changes;
 }
 
-/** True when a plan changes more than the bookkeeping dates (access date, fetch time). */
+/** True when a plan changes more than the bookkeeping fetch time. */
 export function hasRealChanges(changes: readonly FieldChange[]): boolean {
     return changes.some(c => !BOOKKEEPING_KEYS.has(c.key));
 }

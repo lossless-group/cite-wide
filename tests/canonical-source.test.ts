@@ -197,7 +197,8 @@ describe('assembleCanonicalFrontmatter', () => {
         assert.equal(fm['publication_type'], 'report');
         assert.equal(fm['first_accessed_at_url'], FORM.url);
         assert.equal(fm['date_added'], '2026-10-06');
-        assert.equal(fm['date_recently_accessed'], '2026-10-06');
+        assert.ok(typeof fm['date_fetched'] === 'string' && fm['date_fetched'] !== '', 'date_fetched set');
+        assert.equal('date_recently_accessed' in fm, false);
         assert.equal(fm['piece_og_image'], 'https://imgv2.scribdassets.com/cover.jpg');
         assert.equal(fm['publisher_favicon_url'], 'https://www.scribd.com/favicon.ico');
         assert.equal('subtitle' in fm, false, 'an empty subtitle is left off');
@@ -247,7 +248,7 @@ describe('assembleCanonicalFrontmatter', () => {
         assert.equal(second['date_added'], '2026-10-06');
         assert.equal(second['url'], 'https://batteryventures.com/opencloud-2021', 'the edited URL becomes the working url');
         assert.equal(second['publisher_url'], 'https://batteryventures.com');
-        assert.equal(second['date_recently_accessed'], '2026-10-06', 'a failed fetch does not advance date_recently_accessed');
+        assert.equal(second['date_fetched'], first['date_fetched'], 'a failed fetch does not advance date_fetched');
         assert.equal(second['piece_og_image'], 'https://imgv2.scribdassets.com/cover.jpg', 'a failed fetch keeps the stored og image');
     });
 
@@ -276,7 +277,7 @@ describe('assembleCanonicalFrontmatter', () => {
         assert.equal(fm['created'], '2026-10-06T12:00:00.000Z');
         assert.equal(fm['referenceText'], 'https://stratechery.com/2015/aggregation-theory/');
         assert.deepEqual(fm['tags'], []);
-        assert.equal('date_recently_accessed' in fm, false, 'no fetch, no access date');
+        assert.equal('date_fetched' in fm, false, 'no fetch, no fetch time');
     });
 });
 

@@ -59,7 +59,7 @@ See [[Enriching-the-Lossless-Vault-Citations]] for what that run taught us. Ever
 | `author` | Fill when empty, or when the stored value fails `isPlausibleAuthor` (reading times, sentence fragments, link debris). |
 | `authors` (list) | Add when absent; replace only when every entry fails `isPlausibleAuthor`. |
 | `publisher`, `publisher_url`, `date_published`, `piece_og_image`, `publisher_*` brand fields | Add when absent; never blank a stored value. |
-| `date_recently_accessed` | Set when tier 1 succeeded. |
+| `date_fetched` | ISO timestamp of the fetch, when tier 1 or tier 2 succeeded. One field: `date_recently_accessed` meant the same thing and is no longer written. |
 | `filesUsedIn` | The notes that use `[^id]` today, as `[[full/path|Alias]]` (`obsidianLinker`). Replace when the stored list differs and at least one usage was found; keep it when none was found. |
 | `canonical` | **Never set.** Promotion stays a deliberate act. |
 | everything else | Untouched. |
@@ -67,7 +67,7 @@ See [[Enriching-the-Lossless-Vault-Citations]] for what that run taught us. Ever
 ## Behavior
 
 - **Concurrency:** 4 fetches at a time. A progress notice shows "Enriching 12 / 70…", with a Cancel button that stops before the review step.
-- **Re-running is safe.** A second run over an enriched vault proposes zero changes, apart from `date_recently_accessed`, which is excluded from the "has changes" count.
+- **Re-running is safe.** A second run over an enriched vault proposes zero changes, apart from `date_fetched`, which is excluded from the "has changes" count.
 - **Standalone:** no new dependencies; all network calls go through `requestUrl`.
 
 ## Acceptance

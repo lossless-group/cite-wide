@@ -161,8 +161,7 @@ publisher_web_manifest_url: "https://example.com/manifest.json"  # Lists further
 first_accessed_at_url: "https://example.com/article"        # Required. The URL we *originally* retrieved from. Anchoring + attribution. Spine field.
 date_added: 2026-04-15                                      # When this citation entry was created in our system.
 recently_accessed_at_url: "https://example.com/article-v2"  # The CURRENT URL if the source has drifted (slug rename, redirect, mirror). Often = first_accessed_at_url; only diverges on drift detection.
-date_recently_accessed: 2026-04-20                          # When we last successfully retrieved (by either URL).
-date_fetched: "2026-10-06T19:54:40.000Z"                    # ISO timestamp of the last metadata fetch (Cite Wide's Enrich and Promote). Bookkeeping only. Not a publication date: some readers (Jina) report this time as "Published Time".
+date_fetched: "2026-10-06T19:54:40.000Z"                    # When we last successfully retrieved the source (ISO timestamp). Replaces date_recently_accessed, which meant the same thing. Not a publication date: some readers (Jina) report this time as "Published Time".
 
 # ─── Media (display & social-share assets) ───────────────────────────────
 piece_og_image: "https://example.com/article/og-image.jpg"

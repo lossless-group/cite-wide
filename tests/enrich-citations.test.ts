@@ -22,6 +22,7 @@ import { isCitationFilePath, readVaultNotes } from '../src/services/enrichCitati
 import type { BrandAssets, DirectFetchResult } from '../src/services/directFetchService';
 
 const TODAY = '2026-10-06';
+const FETCHED_AT = '2026-10-06T19:54:40.000Z';
 const OPENCLOUD = '[^80nyxu]: 2021, Nov. ["State of the OpenCloud 2021"](https://www.scribd.com/document/536774580/Battery-Ventures-OpenCloud-Report-2021#fullscreen&from_embed). Scribd. Battery Ventures.';
 const OPENCLOUD_URL = 'https://www.scribd.com/document/536774580/Battery-Ventures-OpenCloud-Report-2021#fullscreen&from_embed';
 
@@ -38,7 +39,7 @@ function tier1(over: Partial<DirectFetchResult> = {}): DirectFetchResult {
 }
 
 function fetched(over: Partial<FetchedCitation> = {}): FetchedCitation {
-    return { tier1: null, tier2: null, brand: undefined, channel: null, fetchedOn: TODAY, ...over };
+    return { tier1: null, tier2: null, brand: undefined, channel: null, fetchedOn: TODAY, fetchedAt: FETCHED_AT, ...over };
 }
 
 function usage(files: string[], definition?: string): CitationUsage {
@@ -69,8 +70,8 @@ describe('planCitationChanges', () => {
         assert.equal(to['publisher_url'], 'https://www.scribd.com');
         assert.equal(to['date_published'], '2021-11');
         assert.deepEqual(to['filesUsedIn'], ['[[Vocabulary/Open Source Software|Open Source Software]]']);
-        // Tier 1 failed, so the access date is not claimed.
-        assert.equal('date_recently_accessed' in to, false);
+        // Nothing was fetched, so no fetch time is claimed.
+        assert.equal('date_fetched' in to, false);
         for (const c of changes) assert.ok(c.reason.trim(), `${c.key} has no reason`);
         const title = changes.find(c => c.key === 'title');
         assert.equal(title?.from, '');
@@ -177,7 +178,7 @@ describe('planCitationChanges', () => {
         assert.equal(to['publisher_brand_color'], '#123456');
         assert.equal('publisher_logo_url' in to, false);
         assert.equal('publisher' in to, false);
-        assert.equal(to['date_recently_accessed'], TODAY);
+        assert.equal(to['date_fetched'], FETCHED_AT);
     });
 
     test('an already-enriched file proposes no changes (idempotence)', () => {
@@ -190,9 +191,9 @@ describe('planCitationChanges', () => {
         const second = planCitationChanges(fm, f, u);
         assert.deepEqual(second, []);
         assert.equal(hasRealChanges(second), false);
-        // A later run on another day only refreshes the access date.
-        const third = planCitationChanges(fm, { ...f, fetchedOn: '2026-11-01' }, u);
-        assert.deepEqual(third.map(c => c.key), ['date_recently_accessed']);
+        // A later run only refreshes the fetch time, which is bookkeeping.
+        const third = planCitationChanges(fm, { ...f, fetchedOn: '2026-11-01', fetchedAt: '2026-11-01T09:00:00.000Z' }, u);
+        assert.deepEqual(third.map(c => c.key), ['date_fetched']);
         assert.equal(hasRealChanges(third), false);
     });
 });
@@ -421,5 +422,5 @@ test('date_fetched records the fetch time and, like the access date, is bookkeep
     );
     const fetched = changes.find(c => c.key === 'date_fetched');
     assert.equal(fetched?.to, at);
-    assert.equal(hasRealChanges(changes.filter(c => c.key === 'date_fetched' || c.key === 'date_recently_accessed')), false);
+    assert.equal(hasRealChanges(changes.filter(c => c.key === 'date_fetched')), false);
 });

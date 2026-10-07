@@ -117,7 +117,7 @@ async function fetchCitation(current: Record<string, unknown>, usage: CitationUs
 
 export interface PlanOptions {
     folder: string;
-    /** YYYY-MM-DD, for date_recently_accessed. */
+    /** YYYY-MM-DD, the day of the run. */
     today: string;
     concurrency?: number;
     /** Set `cancelled` to stop before the review step. */
