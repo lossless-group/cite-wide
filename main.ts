@@ -19,6 +19,8 @@ import {
     findFootnoteDefinition,
     needsTier2,
     needsPublisherBrand,
+    isYouTubeUrl,
+    fetchYouTubeChannel,
     fetchPublisherBrand,
     mergeBrand,
     parseFootnote,
@@ -671,19 +673,21 @@ export default class CiteWidePlugin extends Plugin {
         let tier1: DirectFetchResult | null = null;
         let tier2: Tier2Meta | null = null;
         let brand: BrandAssets | undefined;
+        let channel: string | null = null;
         if (url) {
             const progress = new Notice('Reading the source\u2019s metadata\u2026', 0);
             try {
                 tier1 = await fetchTier1(url);
                 if (needsTier2(tier1)) tier2 = await fetchTier2(url);
                 brand = tier1?.brand;
+                if (isYouTubeUrl(url) && !(tier1?.authors.length)) channel = await fetchYouTubeChannel(url);
                 if (needsPublisherBrand(tier1, url)) brand = mergeBrand(brand, await fetchPublisherBrand(url));
             } finally {
                 progress.hide();
             }
         }
 
-        const prefill = buildPrefill({ parsed, existing, tier1, tier2 });
+        const prefill = buildPrefill({ parsed, existing, tier1, tier2, channel });
         const sourceFile = this.app.workspace.getActiveFile()?.path;
         new PromoteCanonicalSourceModal(this.app, hexId, prefill, async ({ form, capture }) => {
             const working = capture && form.url.trim()

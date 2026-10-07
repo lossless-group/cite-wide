@@ -108,27 +108,18 @@ export function getMetaAll(
     attrName: 'property' | 'name',
     attrValue: string
 ): string[] {
-    const v = attrValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Two patterns because the content attribute can sit on either side of the
-    // name/property attribute.
-    const patterns = [
-        new RegExp(
-            `<meta\\s+[^>]*${attrName}\\s*=\\s*["']${v}["'][^>]*content\\s*=\\s*["']([^"']*)["']`,
-            'gi'
-        ),
-        new RegExp(
-            `<meta\\s+[^>]*content\\s*=\\s*["']([^"']*)["'][^>]*${attrName}\\s*=\\s*["']${v}["']`,
-            'gi'
-        ),
-    ];
-
+    // Read each <meta> tag's attributes, quote-aware and in document order.
+    // The ported pattern matched content=["']([^"']*)["'], so a double-quoted
+    // value containing an apostrophe was cut short: content="Kyle O'Brien"
+    // came back as "Kyle O". It also returned name-first tags before
+    // content-first ones, scrambling multi-author order.
+    const want = attrValue.toLowerCase();
     const values: string[] = [];
-    for (const pattern of patterns) {
-        let match: RegExpExecArray | null;
-        while ((match = pattern.exec(html)) !== null) {
-            const decoded = decodeEntities(match[1] ?? '').trim();
-            if (decoded) values.push(decoded);
-        }
+    for (const m of html.matchAll(/<meta\b[^>]*>/gi)) {
+        const tag = m[0];
+        if ((attr(tag, attrName) ?? '').toLowerCase() !== want) continue;
+        const content = attr(tag, 'content');
+        if (content) values.push(content);
     }
     return [...new Set(values)];
 }
@@ -317,6 +308,63 @@ export function extractBrandAssets(html: string, baseUrl: string): BrandAssets {
     };
 }
 
+const ARTICLE_TYPES = /^(Article|NewsArticle|BlogPosting|TechArticle|ScholarlyArticle|Report|WebPage|VideoObject|DiscussionForumPosting|SocialMediaPosting|DigitalDocument|Book|CreativeWork|HowTo|Review)$/;
+
+function personNames(v: unknown): string[] {
+    if (typeof v === 'string') return [v];
+    if (Array.isArray(v)) return v.flatMap(personNames);
+    if (v && typeof v === 'object') {
+        const name = (v as Record<string, unknown>)['name'];
+        return typeof name === 'string' ? [name] : [];
+    }
+    return [];
+}
+
+/** `author` (else `creator`) of the page's article-like JSON-LD node. */
+export function jsonLdAuthors(html: string): string[] {
+    for (const node of jsonLdNodes(html)) {
+        const t = node['@type'];
+        const types = (Array.isArray(t) ? t : [t]).filter((x): x is string => typeof x === 'string');
+        if (!types.some(x => ARTICLE_TYPES.test(x))) continue;
+        const names = personNames(node['author'] ?? node['creator']).map(n => decodeEntities(n).trim()).filter(Boolean);
+        if (names.length) return [...new Set(names)];
+    }
+    return [];
+}
+
+/**
+ * Medium, Ghost, and WordPress put the byline in twitter:data1 — but only when
+ * twitter:label1 says so. Elsewhere data1 is the reading time ("3 minutes"),
+ * which is how reading times ended up stored as authors.
+ */
+export function twitterWrittenBy(html: string): string[] {
+    const out: string[] = [];
+    for (const n of ['1', '2']) {
+        const label = getMeta(html, 'name', `twitter:label${n}`) ?? '';
+        const data = getMeta(html, 'name', `twitter:data${n}`);
+        if (data && /^(written by|author|by)$/i.test(label.trim())) out.push(data);
+    }
+    return out;
+}
+
+/**
+ * Last HTML resort: the visible byline. Text of the first elements whose class
+ * or itemprop names an author or byline (Rivery, Deloitte, Harvard DCE expose
+ * nothing else). Only name-shaped strings survive downstream filtering;
+ * "By" and "Published by" prefixes are dropped here.
+ */
+export function bylineElements(html: string): string[] {
+    const out: string[] = [];
+    const re = /<(?:a|span|div|p|li|address|strong)\b[^>]*(?:class|itemprop)\s*=\s*["'][^"']*\b(?:author|byline)(?:-name|__name|_name|Name)?\b[^"']*["'][^>]*>((?:(?!<\/?(?:a|span|div|p|li|address|strong)\b)[\s\S]){1,200})/gi;
+    for (const m of html.matchAll(re)) {
+        const text = decodeEntities((m[1] ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+            .replace(/^(published )?by\s*:?\s*/i, '');
+        if (text && text.length <= 60 && !out.includes(text)) out.push(text);
+        if (out.length >= 4) break;
+    }
+    return out;
+}
+
 /** Content types we save as files rather than parse as HTML. */
 const DOCUMENT_CONTENT_TYPE = /^application\/(pdf|epub\+zip|vnd\.openxmlformats-officedocument\.)/i;
 
@@ -362,10 +410,16 @@ export function parseDirectFetchHtml(html: string, url: string): ParsedHtmlMeta 
     // citation_* leads because it's the Highwire Press standard scholarly
     // publishers emit, and it's complete where the generic tags are lossy.
     const citationAuthors = getMetaAll(html, 'name', 'citation_author');
+    // Fallback order, from probing 40 author-less citations (2026-10-06):
+    // JSON-LD carried the byline on 15 (DevRev, Figma, HBR, LinkedIn, dev.to…)
+    // that have no author meta tag; a few expose it only in a visible byline.
     const authors = firstNonEmpty(
         citationAuthors,
+        jsonLdAuthors(html),
         getMetaAll(html, 'name', 'author'),
-        getMetaAll(html, 'property', 'article:author')
+        getMetaAll(html, 'property', 'article:author'),
+        twitterWrittenBy(html),
+        bylineElements(html)
     )
         // `article:author` is frequently a profile URL rather than a name.
         .filter((value) => !/^https?:\/\//i.test(value))

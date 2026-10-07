@@ -1,0 +1,50 @@
+// Author fallbacks, from probing the 40 author-less citations in the lossless
+// vault (2026-10-06). Each fixture mirrors where a real page kept its byline.
+
+import { test, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseDirectFetchHtml, jsonLdAuthors, twitterWrittenBy, bylineElements } from '../src/services/directFetchService';
+import { buildPrefill, fetchYouTubeChannel, isYouTubeUrl } from '../src/services/canonicalSourceService';
+
+const U = 'https://example.com/post';
+
+test('JSON-LD article author (DevRev, Figma, HBR, LinkedIn, dev.to had nothing else)', () => {
+    const one = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Akshaya Seshadri"}}</script>';
+    assert.deepEqual(parseDirectFetchHtml(one, U).authors, ['Akshaya Seshadri']);
+    const many = '<script type="application/ld+json">{"@graph":[{"@type":"WebSite"},{"@type":"Article","author":[{"@type":"Person","name":"Gregor Gimmy"},{"@type":"Person","name":"Dominik Kanbach"}]}]}</script>';
+    assert.deepEqual(jsonLdAuthors(many), ['Gregor Gimmy', 'Dominik Kanbach']);
+});
+
+test('twitter:data1 is a byline only when label1 says so', () => {
+    assert.deepEqual(twitterWrittenBy('<meta name="twitter:label1" content="Written by"><meta name="twitter:data1" content="Kyle O\'Brien">'), ["Kyle O'Brien"]);
+    assert.deepEqual(twitterWrittenBy('<meta name="twitter:label1" content="Est. reading time"><meta name="twitter:data1" content="3 minutes">'), []);
+});
+
+test('visible byline element is the last HTML resort (Rivery, Deloitte, Harvard DCE)', () => {
+    assert.deepEqual(bylineElements('<div class="post-author__name">Chen Cuello</div>'), ['Chen Cuello']);
+    assert.deepEqual(bylineElements('<span class="byline">By Maggie Wooll</span>'), ['Maggie Wooll']);
+    assert.deepEqual(parseDirectFetchHtml('<p class="author">Mary Sharp Emerson</p>', U).authors, ['Mary Sharp Emerson']);
+});
+
+afterEach(() => { delete (globalThis as { __requestUrl?: unknown }).__requestUrl; });
+
+test('YouTube: the channel, via oEmbed', async () => {
+    assert.equal(isYouTubeUrl('https://youtu.be/ZJLJnLYwM5w?si=x'), true);
+    assert.equal(isYouTubeUrl('https://example.com/youtu.be'), false);
+    (globalThis as { __requestUrl?: unknown }).__requestUrl = (req: { url: string }) => {
+        assert.match(req.url, /^https:\/\/www\.youtube\.com\/oembed\?format=json&url=/);
+        return { status: 200, headers: {}, text: '', arrayBuffer: new ArrayBuffer(0), json: { author_name: 'Dev Tools Made Simple' } };
+    };
+    assert.equal(await fetchYouTubeChannel('https://youtu.be/ZJLJnLYwM5w'), 'Dev Tools Made Simple');
+    const pre = buildPrefill({ parsed: null, existing: { url: 'https://youtu.be/ZJLJnLYwM5w' }, tier1: null, tier2: null, channel: 'Dev Tools Made Simple' });
+    assert.deepEqual(pre.authors, ['Dev Tools Made Simple']);
+});
+
+test('no person credited: the organization is the group author; Wikipedia is "Wikipedia contributors"', () => {
+    const org = buildPrefill({ parsed: null, existing: { url: 'https://www.kaszek.com/companies/trela', source: 'Kaszek' }, tier1: null, tier2: null });
+    assert.deepEqual(org.authors, ['Kaszek']);
+    const wiki = buildPrefill({ parsed: null, existing: { url: 'https://en.wikipedia.org/wiki/Multi-model_database' }, tier1: null, tier2: null });
+    assert.deepEqual(wiki.authors, ['Wikipedia contributors']);
+    const person = buildPrefill({ parsed: null, existing: { url: U, author: 'Jane Doe', source: 'Acme' }, tier1: null, tier2: null });
+    assert.deepEqual(person.authors, ['Jane Doe'], 'a credited person always wins over the organization');
+});

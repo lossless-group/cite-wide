@@ -44,7 +44,8 @@ const BLOG_HTML = `<html><head>
 
 describe('getMetaAll', () => {
     test('returns every citation_author, in either attribute order, de-duplicated', () => {
-        assert.deepEqual(getMetaAll(SCHOLARLY_HTML, 'name', 'citation_author'), ['Dayan, Danel', 'Doe, Jane, PhD', 'Ng, Neeraj']);
+        // Document order: the quote-aware parser reads tags in sequence.
+        assert.deepEqual(getMetaAll(SCHOLARLY_HTML, 'name', 'citation_author'), ['Dayan, Danel', 'Ng, Neeraj', 'Doe, Jane, PhD']);
         assert.deepEqual(getMetaAll('<meta name="a" content="x"><meta name="a" content="x">', 'name', 'a'), ['x']);
     });
 
@@ -79,7 +80,7 @@ describe('parseDirectFetchHtml', () => {
         assert.equal(m.citationTitle, 'State of the OpenCloud 2021');
         assert.equal(m.scholarly, true);
         // Order follows Metafetch's two-pass regex: name-before-content tags first.
-        assert.deepEqual(m.authors, ['Danel Dayan', 'Doe, Jane, PhD', 'Neeraj Ng']);
+        assert.deepEqual(m.authors, ['Danel Dayan', 'Neeraj Ng', 'Doe, Jane, PhD']);
         assert.equal(m.published, '2021-11-03');
         assert.equal(m.citationPublisher, 'Battery Ventures');
         assert.equal(m.siteName, 'Scribd');

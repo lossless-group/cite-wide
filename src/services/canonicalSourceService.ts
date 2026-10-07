@@ -501,6 +501,8 @@ export interface PrefillInput {
     existing: Record<string, unknown>;
     tier1: DirectFetchResult | null;
     tier2: Tier2Meta | null;
+    /** A video's channel name (YouTube oEmbed `author_name`). */
+    channel?: string | null | undefined;
 }
 
 /**
@@ -512,7 +514,42 @@ export interface PrefillInput {
  *   → tier 2, Jina Reader
  *   → the light file's own fields.
  */
-export function buildPrefill({ parsed, existing, tier1, tier2 }: PrefillInput): CanonicalForm {
+/**
+ * When no person is credited, the organization is the author: the standard
+ * "group author" citation (APA, Chicago). Product pages, docs, company blogs,
+ * forums, and reports published under a firm's name all land here. Wikipedia
+ * is credited to "Wikipedia contributors".
+ */
+function withGroupAuthor(url: string, publisher: string, authors: string[]): string[] {
+    if (authors.length > 0) return authors;
+    if (/(^|\.)wikipedia\.org$/i.test(hostOf(url))) return ['Wikipedia contributors'];
+    const org = publisher.replace(/^\[\[(?:[^\]|]*\|)?([^\]]+)\]\]$/, '$1').trim();
+    return org && !/^https?:\/\//i.test(org) ? [publisher.trim()] : [];
+}
+
+function hostOf(url: string): string {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+export function isYouTubeUrl(url: string): boolean {
+    return /^(youtu\.be|youtube\.com|m\.youtube\.com|music\.youtube\.com)$/i.test(hostOf(url));
+}
+
+/** A YouTube video's channel name, via the public oEmbed endpoint. Null on failure. */
+export async function fetchYouTubeChannel(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<string | null> {
+    if (!isYouTubeUrl(url)) return null;
+    const attempt = requestUrl({ url: `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`, throw: false })
+        .then(res => {
+            if (res.status !== 200) return null;
+            const j: unknown = res.json;
+            const name = j && typeof j === 'object' ? (j as Record<string, unknown>)['author_name'] : undefined;
+            return typeof name === 'string' && name.trim() ? name.trim() : null;
+        })
+        .catch(() => null);
+    return withTimeout<string | null>(attempt, timeoutMs, null);
+}
+
+export function buildPrefill({ parsed, existing, tier1, tier2, channel }: PrefillInput): CanonicalForm {
     const canon = existing['canonical'] === true;
     const stored = (key: string): string | undefined => (canon ? asString(existing[key]) : undefined);
     const scholarly = tier1?.scholarly === true;
@@ -529,6 +566,15 @@ export function buildPrefill({ parsed, existing, tier1, tier2 }: PrefillInput): 
     );
     const storedType = existing['publication_type'];
 
+    const publisherName = firstText(
+            stored('publisher'),
+            tier1?.citationPublisher,
+            parsed?.publisher,
+            tier1?.siteName,
+            tier2?.publisher,
+            asString(existing['source']),
+        ) ?? '';
+
     return {
         title: firstText(...[
             stored('title'),
@@ -540,23 +586,17 @@ export function buildPrefill({ parsed, existing, tier1, tier2 }: PrefillInput): 
             asString(existing['title']),
         ].map(t => (isJunkTitle(t) ? undefined : t))) ?? '',
         subtitle: stored('subtitle') ?? '',
-        authors: firstList(
+        authors: withGroupAuthor(url, publisherName, firstList(
             canon ? asStringArray(existing['authors']) : [],
             scholarly ? tier1?.authors ?? [] : [],
             parsed?.authors ?? [],
             tier1?.authors ?? [],
             tier2?.authors ?? [],
             lightAuthor ? splitAuthors(lightAuthor) : [],
-        ),
+            channel ? [channel] : [],
+        )),
         datePublished: date ? normalizeDatePublished(date) ?? date : '',
-        publisher: firstText(
-            stored('publisher'),
-            tier1?.citationPublisher,
-            parsed?.publisher,
-            tier1?.siteName,
-            tier2?.publisher,
-            asString(existing['source']),
-        ) ?? '',
+        publisher: publisherName,
         publicationType: canon && isPublicationType(storedType) ? storedType : guessPublicationType(tier1, url || undefined),
         url,
     };
