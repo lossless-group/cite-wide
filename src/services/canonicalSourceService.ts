@@ -456,9 +456,23 @@ export async function fetchTier2(url: string, timeoutMs: number = FETCH_TIMEOUT_
     return {
         title: reader.title,
         authors: reader.author ? splitAuthors(reader.author) : [],
-        datePublished: reader.publishedTime,
+        datePublished: plausiblePublishedTime(reader.publishedTime),
         publisher: reader.siteName,
     };
+}
+
+/**
+ * Jina reports the time of the fetch as "Published Time" for pages that carry
+ * no date (seen 2026-10-06: Navicat and Atlassian Community both came back
+ * "published" minutes earlier). A date within a few days of now is treated
+ * as that artifact, not as a publication date. Dates that won't parse are
+ * passed through for the footnote-style normalizer to judge.
+ */
+export function plausiblePublishedTime(raw: string | undefined, now: number = Date.now()): string | undefined {
+    if (!raw) return undefined;
+    const t = Date.parse(raw);
+    if (Number.isNaN(t)) return raw;
+    return now - t < 3 * 24 * 60 * 60 * 1000 ? undefined : raw;
 }
 
 function guessPublicationType(tier1: DirectFetchResult | null, url: string | undefined): PublicationType {

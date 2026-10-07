@@ -77,3 +77,12 @@ test("BEM byline names win; job-title and role elements never count (Deloitte's 
     assert.deepEqual(bylineElements(html), ['Maggie Wooll', 'John Hagel III']);
     assert.deepEqual(bylineElements('<div class="author-role">Head of Research</div><div class="author-bio">Writes about X</div>'), []);
 });
+
+test("Jina's fetch-time 'Published Time' is not a publication date", async () => {
+    const { plausiblePublishedTime } = await import('../src/services/canonicalSourceService');
+    const now = Date.parse('Tue, 06 Oct 2026 20:00:00 GMT');
+    assert.equal(plausiblePublishedTime('Tue, 06 Oct 2026 19:54:40 GMT', now), undefined, 'minutes before the fetch');
+    assert.equal(plausiblePublishedTime('2026-10-04T08:00:00Z', now), undefined, 'two days before');
+    assert.equal(plausiblePublishedTime('2025-06-11T00:00:00Z', now), '2025-06-11T00:00:00Z');
+    assert.equal(plausiblePublishedTime(undefined, now), undefined);
+});
