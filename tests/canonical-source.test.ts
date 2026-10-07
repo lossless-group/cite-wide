@@ -222,7 +222,8 @@ describe('assembleCanonicalFrontmatter', () => {
             hexId: '80nyxu', form: FORM, fetched: null, today: '2026-10-06', newUuid,
             sourceFile: 'Memos/New.md',
         });
-        const expected = ['Vocabulary/Open Source Software.md', 'Memos/Infra.md', 'Memos/New.md'];
+        // Legacy path entries are kept; the new entry is a wikilink, which Obsidian updates on rename.
+        const expected = ['Vocabulary/Open Source Software.md', 'Memos/Infra.md', '[[Memos/New]]'];
         assert.deepEqual(fm['filesUsedIn'], expected);
         assert.deepEqual(fm['cited_in_files'], expected);
         assert.notEqual(fm['cited_in_files'], fm['filesUsedIn'], 'separate arrays, so YAML does not emit an anchor');
@@ -423,6 +424,18 @@ function makeApp(): App {
             processFrontMatter: (file: TFile, fn: (fm: FM) => void) => {
                 fn(vaultFiles.get(file.path)!.fm);
                 return Promise.resolve();
+            },
+        },
+        metadataCache: {
+            getFileCache: () => null,
+            // Minimal link resolution: link text is the path without .md; a bare name matches by basename.
+            fileToLinktext: (f: TFile) => f.path.replace(/\.md$/, ''),
+            getFirstLinkpathDest: (link: string) => {
+                for (const e of [...vaultFiles.values()].map(v => v.file)) {
+                    const p = e.path.replace(/\.md$/, '');
+                    if (p === link || p.split('/').pop() === link) return e;
+                }
+                return null;
             },
         },
     } as unknown as App;

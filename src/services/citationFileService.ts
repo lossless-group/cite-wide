@@ -1,4 +1,5 @@
 import { App, TFile, TFolder, Notice } from 'obsidian';
+import { addFileLink, obsidianLinker } from '../utils/fileLinks';
 import { asNumber, asString, asStringArray, isRecord } from '../utils/coerce';
 import type { CitationData } from './urlCitationService';
 import { citationService, type CitationGroup } from './citationService';
@@ -135,11 +136,8 @@ export class CitationFileService {
                 }
                 fm['usageCount'] = (asNumber(fm['usageCount']) ?? 0) + 1;
                 fm['lastModified'] = new Date().toISOString();
-                if (sourceFile) {
-                    const files = asStringArray(fm['filesUsedIn']);
-                    if (!files.includes(sourceFile)) files.push(sourceFile);
-                    fm['filesUsedIn'] = files;
-                }
+                // Wikilinks, so Obsidian keeps them correct through renames; legacy paths are upgraded.
+                fm['filesUsedIn'] = addFileLink(asStringArray(fm['filesUsedIn']), sourceFile, obsidianLinker(this.app, citationFile.path));
             });
         } catch (error) {
             console.error('Error updating citation usage:', error);
@@ -336,7 +334,7 @@ export class CitationFileService {
             lastModified: now,
             referenceText: undefined,
             usageCount: 1,
-            filesUsedIn: sourceFile ? [sourceFile] : [],
+            filesUsedIn: addFileLink([], sourceFile, obsidianLinker(this.app, `${this.citationsFolder}/${hexId}.md`)),
         };
     }
 
@@ -358,7 +356,7 @@ export class CitationFileService {
             lastModified: now,
             referenceText: extracted.referenceText,
             usageCount: 1,
-            filesUsedIn: sourceFile ? [sourceFile] : [],
+            filesUsedIn: addFileLink([], sourceFile, obsidianLinker(this.app, `${this.citationsFolder}/${hexId}.md`)),
         };
     }
 

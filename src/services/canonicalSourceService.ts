@@ -12,6 +12,7 @@
 import { requestUrl, TFile, type App } from 'obsidian';
 import { asNumber, asString, asStringArray } from '../utils/coerce';
 import { fetchDirectOpenGraph, headerValue, type BrandAssets, type DirectFetchResult } from './directFetchService';
+import { addFileLink, obsidianLinker, plainLinker, type FileLinker } from '../utils/fileLinks';
 import { urlCitationService } from './urlCitationService';
 
 export const PUBLICATION_TYPES = ['book', 'report', 'paper', 'article', 'web page', 'video', 'other'] as const;
@@ -539,6 +540,8 @@ export interface AssembleContext {
     fetched: DirectFetchResult | null;
     /** Publisher brand assets; defaults to the tier-1 page's own. */
     brand?: BrandAssets | undefined;
+    /** Writes filesUsedIn / cited_in_files as wikilinks. Defaults to path-only links. */
+    linker?: FileLinker | undefined;
     /** Today, YYYY-MM-DD. */
     today: string;
     newUuid: () => string;
@@ -588,8 +591,7 @@ export function assembleCanonicalFrontmatter(existing: Record<string, unknown>, 
     fm['lastModified'] = now;
     fm['referenceText'] = asString(existing['referenceText']) || ctx.referenceText || '';
     fm['usageCount'] = asNumber(existing['usageCount']) ?? 1;
-    const files = asStringArray(existing['filesUsedIn']);
-    if (ctx.sourceFile && !files.includes(ctx.sourceFile)) files.push(ctx.sourceFile);
+    const files = addFileLink(asStringArray(existing['filesUsedIn']), ctx.sourceFile, ctx.linker ?? plainLinker);
     fm['filesUsedIn'] = files;
 
     // Canonical schema (Lossless-Citation-Standards.md).
@@ -749,6 +751,7 @@ export async function promoteCanonicalSource(app: App, args: PromoteArgs): Promi
             referenceText: args.referenceText,
             downloadedContentPath,
             sourceTextPath,
+            linker: obsidianLinker(app, path),
         });
         for (const key of Object.keys(fm)) if (!(key in next)) delete fm[key];
         Object.assign(fm, next);

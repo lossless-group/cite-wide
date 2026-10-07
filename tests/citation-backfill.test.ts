@@ -31,7 +31,18 @@ function makeApp(): App {
                 return Promise.resolve();
             },
         },
-        metadataCache: { getFileCache: () => null },
+        metadataCache: {
+            getFileCache: () => null,
+            // Minimal link resolution: link text is the path without .md; a bare name matches by basename.
+            fileToLinktext: (f: TFile) => f.path.replace(/\.md$/, ''),
+            getFirstLinkpathDest: (link: string) => {
+                for (const e of [...files.values()].map(v => v.file)) {
+                    const p = e.path.replace(/\.md$/, '');
+                    if (p === link || p.split('/').pop() === link) return e;
+                }
+                return null;
+            },
+        }
     } as unknown as App;
 }
 
@@ -61,7 +72,8 @@ test('saving backfills an empty citation file from its footnote', async () => {
     assert.match(String(fm.referenceText), /State of the OpenCloud 2021/);
     assert.equal(fm.url, 'https://www.scribd.com/document/536774580/Battery-Ventures-OpenCloud-Report-2021');
     assert.equal(fm.usageCount, 2);
-    assert.deepEqual(fm.filesUsedIn, ['a.md', 'Vocabulary/Open Source Software.md']);
+    // The new entry is a wikilink (Obsidian keeps it correct on rename); 'a.md' doesn't exist, so it stays as-is.
+    assert.deepEqual(fm.filesUsedIn, ['a.md', '[[Vocabulary/Open Source Software]]']);
 });
 
 test('saving never overwrites fields that already have values', async () => {
