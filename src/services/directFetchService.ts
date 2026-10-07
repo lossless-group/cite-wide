@@ -70,8 +70,20 @@ export class DirectFetchError extends Error {
     }
 }
 
+// Named entities seen in titles and descriptions. The numeric forms are
+// decoded generically below.
+const NAMED_ENTITIES: Record<string, string> = {
+    rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201D', ldquo: '\u201C', sbquo: '\u201A', bdquo: '\u201E',
+    mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', middot: '\u00B7', bull: '\u2022',
+    copy: '\u00A9', reg: '\u00AE', trade: '\u2122', deg: '\u00B0', times: '\u00D7',
+    laquo: '\u00AB', raquo: '\u00BB', euro: '\u20AC', pound: '\u00A3', yen: '\u00A5', cent: '\u00A2',
+    eacute: '\u00E9', egrave: '\u00E8', aacute: '\u00E1', agrave: '\u00E0', iacute: '\u00ED', oacute: '\u00F3',
+    uacute: '\u00FA', ntilde: '\u00F1', ccedil: '\u00E7', uuml: '\u00FC', ouml: '\u00F6', auml: '\u00E4', szlig: '\u00DF',
+};
+
 function decodeEntities(s: string): string {
     return s
+        .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? m)
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')

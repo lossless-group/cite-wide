@@ -347,10 +347,12 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 export const FETCH_TIMEOUT_MS = 10_000;
 
 /** Tier 1: one GET, parsed for <meta> tags. Null on failure or timeout. */
-// Titles of bot-check and access-denied interstitials. When a site serves one
-// of these instead of the page (Scribd returns "Client Challenge"), its
-// <title> must not be mistaken for the source's title.
-const BLOCKED_PAGE_TITLES = [
+// Titles that describe the fetch, not the source: bot-check interstitials
+// (Scribd answers with "Client Challenge"), error pages, and login walls.
+// Seen in the wild from both the direct fetch and Jina Reader (2026-10-06,
+// enriching the lossless vault's 75 citations), and already present in some
+// stored light citations written by older URL extraction.
+const JUNK_TITLES = [
     /^client challenge$/i,
     /^just a moment\.*$/i,
     /^attention required!?( \| cloudflare)?$/i,
@@ -360,11 +362,22 @@ const BLOCKED_PAGE_TITLES = [
     /^verify(ing)? you are human/i,
     /^security check/i,
     /^captcha/i,
+    /^(404[ :|-]*)?(page )?not found\b/i,
+    /\bpage not found\b/i,
+    /^not found\s*[-|]/i,
+    /page (you('re| are) looking for )?(can['’]?t|cannot|could not) be found/i,
+    /^publication not available$/i,
+    /^(sign|log) ?(in|up)( \| | to |$)/i,
+    /^(error|(an )?(unexpected )?error (has )?occurred)( \d{3})?[.!]?$/i,
 ];
 
+export function isJunkTitle(title: string | undefined): boolean {
+    const t = title?.trim();
+    return !!t && JUNK_TITLES.some(re => re.test(t));
+}
+
 export function isBlockedPage(result: DirectFetchResult): boolean {
-    const title = result.title.trim();
-    return BLOCKED_PAGE_TITLES.some(re => re.test(title));
+    return isJunkTitle(result.title);
 }
 
 export function fetchTier1(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<DirectFetchResult | null> {
@@ -425,6 +438,7 @@ export function mergeBrand(page: BrandAssets | undefined, home: BrandAssets | nu
 /** Tier 2: Jina Reader's metadata. Null on failure or timeout. */
 export async function fetchTier2(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<Tier2Meta | null> {
     const reader = await withTimeout(urlCitationService.fetchReader(url), timeoutMs, null);
+    if (reader && isJunkTitle(reader.title)) return null;
     if (!reader) return null;
     return {
         title: reader.title,
@@ -479,7 +493,15 @@ export function buildPrefill({ parsed, existing, tier1, tier2 }: PrefillInput): 
     const storedType = existing['publication_type'];
 
     return {
-        title: firstText(stored('title'), tier1?.citationTitle, parsed?.title, tier1?.title, tier2?.title, asString(existing['title'])) ?? '',
+        title: firstText(...[
+            stored('title'),
+            tier1?.citationTitle,
+            parsed?.title,
+            // A page whose og:title is just its site name ("Asana") names the publisher, not the piece.
+            tier1 && tier1.title.trim().toLowerCase() !== tier1.siteName.trim().toLowerCase() ? tier1.title : undefined,
+            tier2?.title,
+            asString(existing['title']),
+        ].map(t => (isJunkTitle(t) ? undefined : t))) ?? '',
         subtitle: stored('subtitle') ?? '',
         authors: firstList(
             canon ? asStringArray(existing['authors']) : [],
