@@ -339,6 +339,16 @@ describe('tiers', () => {
         assert.equal(await fetchTier1('https://example.com/a', 20), null);
     });
 
+    test('a bot-check interstitial counts as a failed tier-1 fetch, not a title', async () => {
+        // Scribd served exactly this to a plain GET on 2026-10-06.
+        for (const title of ['Client Challenge', 'Just a moment...', 'Attention Required! | Cloudflare', 'Access Denied']) {
+            setHandler(() => res(200, { text: `<html><head><title>${title}</title></head><body></body></html>`, headers: { 'content-type': 'text/html' } }));
+            assert.equal(await fetchTier1('https://www.scribd.com/document/1'), null, title);
+        }
+        setHandler(() => res(200, { text: '<html><head><title>Client Challenge Report 2024</title></head></html>', headers: { 'content-type': 'text/html' } }));
+        assert.notEqual(await fetchTier1('https://example.com/report'), null, 'a real title that merely starts the same way is kept');
+    });
+
     test('tier 2 runs only when tier 1 leaves title or authors empty', () => {
         assert.equal(needsTier2(null), true);
         assert.equal(needsTier2({ ...FETCHED, authors: [] }), true);

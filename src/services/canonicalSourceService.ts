@@ -347,11 +347,37 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 export const FETCH_TIMEOUT_MS = 10_000;
 
 /** Tier 1: one GET, parsed for <meta> tags. Null on failure or timeout. */
+// Titles of bot-check and access-denied interstitials. When a site serves one
+// of these instead of the page (Scribd returns "Client Challenge"), its
+// <title> must not be mistaken for the source's title.
+const BLOCKED_PAGE_TITLES = [
+    /^client challenge$/i,
+    /^just a moment\.*$/i,
+    /^attention required!?( \| cloudflare)?$/i,
+    /^access denied$/i,
+    /^403 forbidden$/i,
+    /^are you a robot\??$/i,
+    /^verify(ing)? you are human/i,
+    /^security check/i,
+    /^captcha/i,
+];
+
+export function isBlockedPage(result: DirectFetchResult): boolean {
+    const title = result.title.trim();
+    return BLOCKED_PAGE_TITLES.some(re => re.test(title));
+}
+
 export function fetchTier1(url: string, timeoutMs: number = FETCH_TIMEOUT_MS): Promise<DirectFetchResult | null> {
-    const attempt = fetchDirectOpenGraph(url).catch((error: unknown) => {
-        console.warn('Cite Wide: metadata fetch failed, using the footnote instead.', error);
-        return null;
-    });
+    const attempt = fetchDirectOpenGraph(url)
+        .then(result => {
+            if (!isBlockedPage(result)) return result;
+            console.warn(`Cite Wide: ${url} served a bot-check page ("${result.title}"); treating the metadata fetch as failed.`);
+            return null;
+        })
+        .catch((error: unknown) => {
+            console.warn('Cite Wide: metadata fetch failed, using the footnote instead.', error);
+            return null;
+        });
     return withTimeout<DirectFetchResult | null>(attempt, timeoutMs, null);
 }
 
