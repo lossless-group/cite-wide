@@ -124,6 +124,20 @@ Both share the same parser;
 
 ![Command: Extract Citation from URL](https://i.imgur.com/J6JZLNK.png)
 
+### Command: Promote to canonical source
+
+Most citations are passing references. A few deserve to live on: the industry report everyone quotes, the book that frames the argument. **Promote to canonical source** gives those few a complete, reusable record in your Citations folder.
+
+Put the cursor on a footnote marker (`[^80nyxu]`) or on its definition line, then run the command. Cite Wide:
+
+1. **Reads what's already known.** It parses the footnote for the title, URL, date, authors, and publisher, and keeps everything already in `Citations/<id>.md`.
+2. **Reads the source's own metadata.** It fetches the page once and reads its Open Graph, article, and scholarly `citation_*` tags, including every author on a multi-author paper. If that leaves the title or authors empty, it asks [Jina Reader](https://jina.ai/reader/) too. A slow or failed fetch falls back to the footnote.
+3. **Asks you to confirm.** A modal shows the title, subtitle, authors, date published, publisher, publication type, and URL, all editable.
+4. **Captures the source** (on by default). A PDF, EPUB, or Office document is saved to `Citations/_files/<id>.<ext>`, and the text is imported as markdown to `Citations/_text/<id>.md`, with a link back to the citation. If Jina Reader is unavailable, the citation is still promoted and the notice tells you the text wasn't imported.
+5. **Upgrades the citation file** to the canonical schema, keeping its body and every existing property.
+
+The canonical file adds `canonical: true`, `internal_uuid`, `reference_hexcode`, `default_slug`, `subtitle`, `authors`, `date_published`, `publisher`, `publisher_url`, `publication_type`, `first_accessed_at_url`, `date_added`, `date_recently_accessed`, `piece_og_image`, `publisher_favicon_url`, `cited_in_files`, and, when captured, `downloaded_content_path` and `source_text_path`. Promoting again is safe: `internal_uuid`, `first_accessed_at_url`, and `date_added` never change once set, and your edits in the modal always win over fetched values. Filter canonical sources in Dataview with `WHERE canonical = true`.
+
 ***
 
 # Install
