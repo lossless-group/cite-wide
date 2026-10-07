@@ -131,8 +131,39 @@ function sentenceSegments(text: string): string[] {
  * Commas separate only when every part is a multi-word name, so
  * "Thiel, Peter" stays one author while "Peter Thiel, Blake Masters" is two.
  */
+// Lowercase words allowed inside a personal or organizational name.
+const NAME_PARTICLES = /^(de|da|das|do|dos|del|della|di|du|van|von|der|den|ter|le|la|les|bin|binti|al|el|y|e|and|of|the|for|&)$/i;
+// Placeholder bylines content systems emit when no author is set.
+const PLACEHOLDER_AUTHORS = /^(super ?user|admin(istrator)?|guest|staff|editor(ial)?( team)?|unknown|anonymous|author|user|contributor|webmaster|team)$/i;
+
+/**
+ * True when a string is shaped like a person or organization name. Rejects
+ * what stored and fetched "authors" in the lossless vault turned out to be
+ * (2026-10-06): reading times ("3 minutes", "over 4"), sentence fragments
+ * ("completing the action below.", "a multi-model database."), lowercase
+ * phrases ("training data"), markdown links and URLs, and CMS placeholders
+ * ("Super User").
+ */
+export function isPlausibleAuthor(name: string | undefined): boolean {
+    const t = name?.trim() ?? '';
+    if (!t) return false;
+    if (/^\[\[[^\]]+\]\]$/.test(t)) return true;
+    if (/\]\(|https?:\/\/|\[\^|[<>{}|]/.test(t)) return false;
+    if (/[\d?!;:%()\u201C\u201D"]/.test(t)) return false;
+    if (/\.$/.test(t) && !/(^|\s)\p{Lu}\.$/u.test(t)) return false;
+    if (PLACEHOLDER_AUTHORS.test(t)) return false;
+    const words = t.split(/\s+/);
+    if (words.length > 6) return false;
+    if (!/^[\p{Lu}\p{Lt}]/u.test(t)) return false;
+    return words.every(w => !/^\p{Ll}/u.test(w) || NAME_PARTICLES.test(w));
+}
+
 export function splitAuthors(segment: string): string[] {
-    const s = segment.replace(/^by\s+/i, '').trim();
+    const s = segment
+        .replace(/^by\s+/i, '')
+        // "by [[Asianometry]] on [[YouTube]]": the platform is not an author.
+        .replace(/\s+on\s+(\[\[[^\]]+\]\]|\p{Lu}[\p{L}.]*(\s\p{Lu}[\p{L}.]*)*)\s*\.?$/u, '')
+        .trim();
     if (!s) return [];
     const parts = s.includes(';') ? s.split(';') : s.split(/\s+(?:and|&)\s+/i);
     const out: string[] = [];
@@ -334,7 +365,7 @@ function firstText(...values: (string | undefined)[]): string | undefined {
 
 function firstList(...lists: string[][]): string[] {
     for (const list of lists) {
-        const clean = list.map(s => s.trim()).filter(Boolean);
+        const clean = list.map(s => s.trim()).filter(isPlausibleAuthor);
         if (clean.length > 0) return clean;
     }
     return [];

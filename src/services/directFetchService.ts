@@ -369,6 +369,12 @@ export function parseDirectFetchHtml(html: string, url: string): ParsedHtmlMeta 
     )
         // `article:author` is frequently a profile URL rather than a name.
         .filter((value) => !/^https?:\/\//i.test(value))
+        // "Lee Ying Shan,Dylan Butts" is two people, not "Last, First":
+        // split on commas when every part is itself a multi-word name.
+        .flatMap((value) => {
+            const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+            return parts.length > 1 && parts.every((p) => p.split(/\s+/).length > 1) ? parts : [value];
+        })
         .map(normalizeAuthorName);
 
     const publishedRaw =

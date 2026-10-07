@@ -75,3 +75,22 @@ test('a citation marker inside the link text does not break footnote parsing', a
     assert.match(p.title ?? '', /^12 Tips for Effective Communication in the Workplace/);
     assert.deepEqual(p.authors, []);
 });
+
+test('author plausibility: names pass, reading times and fragments do not', async () => {
+    const { isPlausibleAuthor } = await import('../src/services/canonicalSourceService');
+    for (const ok of ["Kyle O'Brien", 'Connie Loizos', 'Chen Hui Jing', 'Ludwig van Beethoven', 'Real Python', '[[Asianometry]]', 'J. R. R. Tolkien', 'Silicon Valley Investclub', 'Groovy Web Team'])
+        assert.equal(isPlausibleAuthor(ok), true, ok);
+    for (const bad of ['3 minutes', 'over 4', '1 minute', 'training data', 'completing the action below.', 'a multi-model database.',
+        'how you structured the process?', 'Super User', 'mssaperla', 'Product](https://university.atlassian.com/x)',
+        '2027 ([McKinsey](https://cts.businesswire.com/x)', 'CVC&A grab enough attention of business units to start co-innovation pilot projects.',
+        'seeing people climb the various hills they’re prepared to die on. With strong opinions often loosely held'])
+        assert.equal(isPlausibleAuthor(bad), false, bad);
+});
+
+test('"by X on Platform" keeps only the author; comma-joined bylines split', async () => {
+    const { splitAuthors } = await import('../src/services/canonicalSourceService');
+    assert.deepEqual(splitAuthors('by [[Asianometry]] on [[YouTube]]'), ['[[Asianometry]]']);
+    assert.deepEqual(splitAuthors('Jane Doe on Medium'), ['Jane Doe']);
+    const { parseDirectFetchHtml } = await import('../src/services/directFetchService');
+    assert.deepEqual(parseDirectFetchHtml('<meta name="author" content="Lee Ying Shan,Dylan Butts">', 'https://x.example/').authors, ['Lee Ying Shan', 'Dylan Butts']);
+});
