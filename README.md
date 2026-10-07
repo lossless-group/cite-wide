@@ -4,6 +4,8 @@
 
 An Obsidian plugin for rigorous, vault-wide citation management. Converts numeric footnotes into stable hex identifiers that survive reorderings, logs each citation into a per-citation file for Bases/Dataview queries, dedupes citations that point at the same URL, and parses pasted research output from Perplexity / Google AI / Claude into the same canonical format on the way in.
 
+> **New in 0.3.0:** Cite Wide's settings now appear in Obsidian's settings search, and every command and button reads in sentence case. Requires Obsidian 1.13 or later. [Release notes →](changelog/releases/0.3.0.md)
+
 ![Cite Wide demo — pasting an LLM research dump and watching every numeric citation convert to a stable hex marker on insert](https://ik.imagekit.io/xvpgfijuw/Image-Gin/2026-05/2026-05-17_Cite-Wide-_Paste-LLM_11.19.51_PM_HU9D8KUp-.webp)
 
 ### Part of the Content Farm ecosystem of Plugins
@@ -13,7 +15,7 @@ Cite Wide is part of a suite of plugins designed to help you build a robust, cit
 - **[Cite Wide](https://github.com/lossless-group/cite-wide)** - Vault-wide citation management
 - **[Image Gin](https://github.com/lossless-group/image-gin)** - Image generation and embedding for several Generative AI image generation services.
 - **[Perplexed](https://github.com/lossless-group/perplexed-plugin)** - Versatile prompt modal to query Perplexity AI or Perplexica, with additional API support in free form. Governs quality and consistency of AI responses.
-- **[Metafetch](https://github.com/lossless-group/metafetch)** - Reference management and citation tracking across your Obsidian vault.
+- **[Metafetch](https://github.com/lossless-group/metafetch)** - Pull OpenGraph metadata for a URL into note frontmatter via OpenGraph.io or Microlink.
 - **[Filestarter Kit](https://github.com/lossless-group/obsidian-plugin-starter)** - Clean, updated starter to clone with various common operations. Our favorite: YAML frontmatter templates and easy form inputs. Others: assemble table of contents, normalize whitespace.  Others are primarily there as examples of how to use the Obsidian API and build a plugin.
 
 [Content Farm](https://github.com/lossless-group/content-farm) is a loosely coupled monorepo, open source, and we operate an **[Open Project Board on GitHub](https://github.com/orgs/lossless-group/projects/2)** where you can request features, share ideas, track progress, and contribute. If you're not getting into the code, we recommend you install each plugin separately to avoid potential frustrations.
@@ -35,7 +37,7 @@ Obsidian (in reader mode) (and several other content tools) _reorder_ citations 
 
 ### 🔢 **Unique Hex Code Generation**
 - Converts numeric citations `[1]` into unique hex codes `[^a1b2c3]`
-- Consistent algorithm ensures the same reference always generates the same hex code
+- Each new hex code is a random 6-character base-36 ID, checked against codes already issued, so markers stay unique and survive reordering
 - Maintains vault-wide consistency across all documents
 
 ### 📊 **Reference Tracking**
@@ -74,7 +76,7 @@ Both share the same parser;
 
 **Spec conformance on output:** every converted line gets a final whitespace pass that ensures (a) one space between content and citation (after `.`, `,`, `:`, `;`, `!`, `?`, or any non-whitespace word boundary), and (b) one space between consecutive `[^hex] [^hex]` markers — per the Lossless inline-citation spec.
 
-#### Command: Parse LLM Citations in Current File
+#### Command: Parse LLM citations in current file
 
 ![Cite-Wide LLM Parser Modal -- Parses file in focus by patterns of LLM Output](https://i.imgur.com/KWhSe1y.png)
 
@@ -85,7 +87,7 @@ Both share the same parser;
 - Already-`[^hex]` citations are preserved verbatim — mid-file human conversions never get re-touched.
 - Detects collisions (same numeric defined twice — likely two LLM-output sections pasted into one file) and refuses to corrupt them; surfaces orphans (cited inline but no ref def, and vice versa) as flags.
 
-#### Command: Paste LLM Content (Convert Citations on Insert)
+#### Command: Paste LLM content (convert citations on insert)
 - Opens a modal with a big textarea + provider radio (Google AI Overviews / Perplexity) + Insert button. Paste your LLM output, click Insert, and the converted form lands at the cursor in one step.
 - Stops the colliding-numerics problem at its source instead of post-hoc — no risk that two pasted Perplexity responses with overlapping `[1]…[N]` series corrupt each other in the same file.
 - Collects the host document's hex namespace before generating new hex IDs, so the inserted citations never collide with `[^hex]` markers already in the file.
@@ -106,40 +108,34 @@ Both share the same parser;
 
 ## 🧩 **Commands**
 
-### Command: Convert Reference Pairings to Hex Modal
+### Command: Show citations in current file (convert to hex)
 
 ![Command: Convert to Hex](https://i.imgur.com/dBMKnV7.gif)
 
-### Command: Clean Reference Section
+### Command: Add colon to footnote references in selection
 
 ![Command: Clean Reference Section](https://i.imgur.com/usdcU1p.gif)
 
-### Command: Assure Spacing for Anchor Link behavior
+### Command: Assure spacing for anchor link behavior
 
 ![Command: Assure Spacing for Anchor Link behavior](https://i.imgur.com/xbzDnPT.gif)
 
-### Command: Extract Citation from URL
+### Command: Extract citation from URL
 
 ![Command: Extract Citation from URL](https://i.imgur.com/J6JZLNK.png)
 
 ***
 
-# Getting Started
+# Install
 
-```
-pnpm install
-pnpm add -D esbuild @types/node builtin-modules
-pnpm build
-pnpm dev
-```
+**Requires Obsidian 1.13 or later** (desktop only).
 
-## Make it show up in Obsidian
+In Obsidian: **Settings → Community plugins → Browse → search "Cite Wide" → Install → Enable.**
 
-Create a symbolic link into the plugins directory:
+Prefer to install by hand? Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/lossless-group/cite-wide/releases/latest) into `<your vault>/.obsidian/plugins/cite-wide/`. Every release asset is cryptographically attested to the commit and workflow that built it. Verify before enabling:
 
-Here is my example, but you will need to use your own path structure:
 ```bash
-ln -s /Users/<username>/<your/preferred/path/to/cite-wide> /Users/<username>/<your-content-folder>/<your-vault-folder>/.obsidian/plugins/cite-wide
+gh attestation verify main.js --repo lossless-group/cite-wide
 ```
 
 ## Configuration
@@ -152,7 +148,10 @@ The plugin automatically creates citation files for Dataview integration:
 2. Set your preferred citations folder (default: "Citations")
 3. Citation files will be created automatically when you use citation commands
 
-### Jina.ai API Key Setup (Optional)
+### Jina.ai API key setup (optional)
+
+Settings search finds every Cite Wide setting: type "Jina", "citations folder", or "auto-save" in Obsidian's settings search box.
+
 
 The URL citation extraction feature works without an API key, but adding one can help avoid rate limits:
 
@@ -166,7 +165,7 @@ The URL citation extraction feature works without an API key, but adding one can
 ### Using URL Citation Extraction
 
 1. Highlight a URL in your document
-2. Run the "Extract Citation from URL" command (Ctrl/Cmd + P)
+2. Run the "Extract citation from URL" command (Ctrl/Cmd + P)
 3. The URL will be replaced with a citation reference like `[^a1b2c3]`
 4. A properly formatted citation will be added to the Footnotes section
 
@@ -227,6 +226,41 @@ SORT author ASC, date DESC
 
 See `examples/dataview-citations-examples.md` for comprehensive Dataview query examples.
 
+# Releases
 
+**0.3.0** — 2026-10-06 · requires Obsidian 1.13
 
+- Settings tab rebuilt on Obsidian 1.13's declarative settings API: every setting is searchable from Obsidian's settings search, and Obsidian draws the tab itself.
+- Command names, buttons, and modal titles in sentence case. Command IDs are unchanged, so your hotkeys keep working.
+- Lint now runs the Obsidian review bot's own rules; modal styling moved from inline styles into `styles.css`.
+- First automated test suite, including a guard that every command registers on load.
+- Full notes: [`changelog/releases/0.3.0.md`](changelog/releases/0.3.0.md).
 
+**0.2.3** — 2026-05-18 · every release asset cryptographically attested. [Notes](changelog/releases/0.2.3.md).
+
+# Development
+
+Requires Node.js 22 and pnpm.
+
+```bash
+git clone https://github.com/lossless-group/cite-wide.git
+cd cite-wide
+pnpm install
+pnpm dev      # esbuild watch: rebuilds main.js and styles.css on change
+pnpm test     # Node's built-in test runner; no network calls
+pnpm build    # tsc + ESLint (Obsidian's review-bot rules) + production bundle
+```
+
+To use your working copy in a vault, symlink it into the vault's plugins folder. The folder name must be the plugin id, `cite-wide`:
+
+```bash
+ln -s /path/to/cite-wide /path/to/your-vault/.obsidian/plugins/cite-wide
+```
+
+Then run `pnpm dev`. Reload the plugin to pick up new builds: toggle it off and on in Community plugins, or quit and reopen Obsidian.
+
+**Releasing.** Bump `manifest.json`, `package.json`, and `versions.json` together (three-part semver), write `changelog/releases/<version>.md`, and push a tag with no `v` prefix (for example `0.3.0`). `.github/workflows/release.yml` then builds, attests, and publishes the release with those notes.
+
+# License
+
+MIT. See [LICENSE](LICENSE). If Cite Wide saves you time, [buy us a coffee](https://buymeacoffee.com/losslessgroup).
