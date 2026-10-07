@@ -29,7 +29,7 @@ export class CitationModal extends Modal {
 
         if (this.citationGroups.length === 0) {
             const empty = contentEl.createDiv('cite-wide-empty');
-            empty.createEl('h2', { text: 'Citations in Document', cls: 'cite-wide-title' });
+            empty.createEl('h2', { text: 'Citations in document', cls: 'cite-wide-title' });
             empty.createEl('p', {
                 text: 'No citations found in the current document.',
                 cls: 'cite-wide-empty-message',
@@ -45,24 +45,24 @@ export class CitationModal extends Modal {
         const header = contentEl.createDiv('cite-wide-header');
 
         const titleBlock = header.createDiv('cite-wide-title-block');
-        titleBlock.createEl('h2', { text: 'Citations in Document', cls: 'cite-wide-title' });
+        titleBlock.createEl('h2', { text: 'Citations in document', cls: 'cite-wide-title' });
         const meta = titleBlock.createDiv('cite-wide-meta');
-        meta.createEl('span', {
+        meta.createSpan({
             text: `${this.citationGroups.length} ${this.citationGroups.length === 1 ? 'citation' : 'citations'}`,
             cls: 'cite-wide-meta-pill',
         });
-        meta.createEl('span', {
+        meta.createSpan({
             text: `${totalInstances} ${totalInstances === 1 ? 'instance' : 'instances'}`,
             cls: 'cite-wide-meta-pill',
         });
         if (numericCount > 0) {
-            meta.createEl('span', {
+            meta.createSpan({
                 text: `${numericCount} numeric`,
                 cls: 'cite-wide-meta-pill cite-wide-meta-numeric',
             });
         }
         if (hexCount > 0) {
-            meta.createEl('span', {
+            meta.createSpan({
                 text: `${hexCount} hex`,
                 cls: 'cite-wide-meta-pill cite-wide-meta-hex',
             });
@@ -151,14 +151,14 @@ export class CitationModal extends Modal {
         // Card header: number badge + counts + format kind
         const cardHeader = card.createDiv('cite-wide-card-header');
         const numberBadge = cardHeader.createDiv('cite-wide-number-badge');
-        numberBadge.createEl('span', { text: `[${displayNumber}]` });
+        numberBadge.createSpan({ text: `[${displayNumber}]` });
 
         const cardMeta = cardHeader.createDiv('cite-wide-card-meta');
-        cardMeta.createEl('span', {
+        cardMeta.createSpan({
             text: `${inlineMatches.length} inline`,
             cls: 'cite-wide-meta-chip',
         });
-        cardMeta.createEl('span', {
+        cardMeta.createSpan({
             text: isHex ? 'hex' : 'numeric',
             cls: `cite-wide-format-chip ${isHex ? 'is-hex' : 'is-numeric'}`,
         });
@@ -168,7 +168,7 @@ export class CitationModal extends Modal {
         if (referenceText || group.url) {
             const refBlock = card.createDiv('cite-wide-card-reference');
             if (referenceText) {
-                refBlock.createEl('div', {
+                refBlock.createDiv({
                     text: this.truncate(referenceText, 220),
                     cls: 'cite-wide-card-reference-text',
                 });
@@ -205,7 +205,7 @@ export class CitationModal extends Modal {
         const cardActions = card.createDiv('cite-wide-card-actions');
         if (isHex) {
             const saveBtn = cardActions.createEl('button', {
-                text: 'Save to Citations',
+                text: 'Save to citations',
                 cls: 'mod-cta cite-wide-card-primary-btn',
             });
             saveBtn.addEventListener('click', (e) => {
@@ -214,7 +214,7 @@ export class CitationModal extends Modal {
             });
         } else {
             const convertBtn = cardActions.createEl('button', {
-                text: 'Convert to Hex',
+                text: 'Convert to hex',
                 cls: 'mod-cta cite-wide-card-primary-btn',
             });
             convertBtn.addEventListener('click', (e) => {
@@ -343,7 +343,7 @@ export class CitationModal extends Modal {
                 this.editor.focus();
             }
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 this.close();
             }, 100);
         } catch (error) {

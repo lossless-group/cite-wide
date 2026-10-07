@@ -12,7 +12,9 @@ import { PasteLlmContentModal } from './src/modals/PasteLlmContentModal';
 import { CiteWideSettingTab, DEFAULT_SETTINGS, type CiteWideSettings } from './src/settings/CiteWideSettings';
 
 export default class CiteWidePlugin extends Plugin {
-    settings!: CiteWideSettings;
+    // Obsidian 1.13 declares `settings?: unknown` on Plugin; initialize here
+    // so the field is typed and never undefined before loadSettings() runs.
+    settings: CiteWideSettings = { ...DEFAULT_SETTINGS };
 
     async onload(): Promise<void> {
         // Load settings
@@ -39,7 +41,7 @@ export default class CiteWidePlugin extends Plugin {
         // Add ribbon icon
         const ribbonIconEl = this.addRibbonIcon(
             'quote-glyph', // You can change this to any Lucide icon name
-            'Add Citation', // Tooltip text
+            'Add citation', // Tooltip text
             () => {
                 // Open citation modal when clicked
                 const activeEditor = this.app.workspace.activeEditor?.editor;
@@ -55,11 +57,13 @@ export default class CiteWidePlugin extends Plugin {
         ribbonIconEl.addClass('cite-wide-ribbon-icon');
     }
 
-    async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    async loadSettings(): Promise<void> {
+        const data: unknown = await this.loadData();
+        const stored = (data !== null && typeof data === 'object' ? data : {}) as Partial<CiteWideSettings>;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
     }
 
-    async saveSettings() {
+    async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
     }
     
@@ -83,7 +87,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to show citations in current file
         this.addCommand({
             id: 'show-citations',
-            name: 'Show Citations in Current File',
+            name: 'Show citations in current file',
             editorCallback: (editor: Editor) => {
                 new CitationModal(this.app, editor).open();
             }
@@ -92,7 +96,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to dedupe citations that share the same URL
         this.addCommand({
             id: 'dedupe-citations-by-url',
-            name: 'Dedupe Citations by URL',
+            name: 'Dedupe citations by URL',
             editorCallback: (editor: Editor) => {
                 new DedupeByUrlModal(this.app, editor).open();
             }
@@ -105,7 +109,7 @@ export default class CiteWidePlugin extends Plugin {
         // via clickable links, and selectively opt in/out per-numeric.
         this.addCommand({
             id: 'parse-llm-citations',
-            name: 'Parse LLM Citations in Current File',
+            name: 'Parse LLM citations in current file',
             editorCallback: (editor: Editor) => {
                 new LlmCitationsModal(this.app, editor).open();
             }
@@ -116,7 +120,7 @@ export default class CiteWidePlugin extends Plugin {
         // numerics problem at its source rather than fixing it post-hoc.
         this.addCommand({
             id: 'paste-llm-content',
-            name: 'Paste LLM Content (Convert Citations on Insert)',
+            name: 'Paste LLM content (convert citations on insert)',
             editorCallback: (editor: Editor) => {
                 new PasteLlmContentModal(this.app, editor).open();
             }
@@ -125,7 +129,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to save all hex citations in the active file as canonical citation files
         this.addCommand({
             id: 'save-all-hex-citations',
-            name: 'Save All Hex Citations to Citation Files',
+            name: 'Save all hex citations to citation files',
             editorCallback: async (editor: Editor) => {
                 try {
                     const content = editor.getValue();
@@ -152,7 +156,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to convert all citations to hex format
         this.addCommand({
             id: 'convert-all-citations',
-            name: 'Convert All Citations to Hex Format',
+            name: 'Convert all citations to hex format',
             editorCallback: async (editor: Editor) => {
                 try {
                     await this.convertAllCitations(editor);
@@ -166,11 +170,11 @@ export default class CiteWidePlugin extends Plugin {
         // Command to insert a new citation
         this.addCommand({
             id: 'insert-hex-citation',
-            name: 'Insert Hex Citation',
+            name: 'Insert hex citation',
             editorCallback: async (editor: Editor) => {
                 try {
                     const cursor = editor.getCursor();
-                    const hexId = citationService.getNewHexId();
+                    const hexId = citationService.generateHexId();
                     
                     // Get current file path for citation tracking
                     const activeFile = this.app.workspace.getActiveFile();
@@ -208,7 +212,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to convert selected citation to hex format
         this.addCommand({
             id: 'convert-selected-citation-to-hex',
-            name: 'Convert Selected Citation to Hex',
+            name: 'Convert selected citation to hex',
             editorCallback: (editor: Editor) => {
                 const selection = editor.getSelection();
                 if (!selection) {
@@ -235,7 +239,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to clean up references section
         this.addCommand({
             id: 'clean-references-section',
-            name: 'Add Colon to Footnote References in Selection',
+            name: 'Add colon to footnote references in selection',
             editorCallback: (editor: Editor) => {
                 const selection = editor.getSelection();
                 if (!selection) {
@@ -252,7 +256,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to convert citation section to footnotes
         this.addCommand({
             id: 'convert-citation-section-to-footnotes',
-            name: 'Convert Citation Section to Footnotes',
+            name: 'Convert citation section to footnotes',
             editorCallback: (editor: Editor) => {
                 const selection = editor.getSelection();
                 if (!selection) {
@@ -269,7 +273,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to format citations by moving them after punctuation and ensuring proper spacing
         this.addCommand({
             id: 'format-citations-punctuation',
-            name: 'Assure Spacing for Anchor Link behavior',
+            name: 'Assure spacing for anchor link behavior',
             editorCallback: (editor: Editor) => {
                 // Process the entire document content
                 const content = editor.getValue();
@@ -294,7 +298,7 @@ export default class CiteWidePlugin extends Plugin {
         // run repeatedly on the same document.
         this.addCommand({
             id: 'lift-table-citations',
-            name: 'Lift Table Citations Below Table',
+            name: 'Lift table citations below table',
             editorCallback: (editor: Editor) => {
                 const content = editor.getValue();
                 const result = tableCitationService.liftTableCitations(content);
@@ -323,7 +327,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to extract citation from highlighted URL
         this.addCommand({
             id: 'extract-citation-from-url',
-            name: 'Extract Citation from URL',
+            name: 'Extract citation from URL',
             editorCallback: async (editor: Editor) => {
                 try {
                     const selection = editor.getSelection();
@@ -339,20 +343,17 @@ export default class CiteWidePlugin extends Plugin {
                     // First, try to match citation with markdown link format: [^hexId]: [title](url)
                     const citationWithMarkdownLinkRegex = /\[\^([a-zA-Z0-9]+)\]:\s*\[([^\]]+)\]\(([^)]+)\)/;
                     let citationMatch = cleanSelection.match(citationWithMarkdownLinkRegex);
-                    console.log('Markdown link regex match:', citationMatch);
                     
                     // If that doesn't work, try direct URL format: [^hexId]: url
                     if (!citationMatch) {
                         const citationWithUrlRegex = /"?\[\^([a-zA-Z0-9]+)\]:\s*(https?:\/\/[^\s]+)"?/;
                         citationMatch = cleanSelection.match(citationWithUrlRegex);
-                        console.log('Direct URL regex match:', citationMatch);
                     }
                     
                     // If the first regex doesn't work, try a more flexible one
                     if (!citationMatch) {
                         const flexibleRegex2 = /"?\[\^([a-zA-Z0-9]+)\]:\s*(https?:\/\/[^)\s]+)"?/;
                         citationMatch = cleanSelection.match(flexibleRegex2);
-                        console.log('Flexible regex match:', citationMatch);
                     }
                     
                     let hexId: string;
@@ -379,8 +380,6 @@ export default class CiteWidePlugin extends Plugin {
                         const filepath = `${citationFileService.getCitationsFolder()}/${filename}`;
                         const existingFile = this.app.vault.getAbstractFileByPath(filepath);
                         
-                        console.log(`Checking for existing citation file: ${filepath}`);
-                        console.log(`Existing file found:`, existingFile);
                         
                         if (existingFile instanceof TFile) {
                             // Citation file already exists - just update usage and notify
@@ -402,7 +401,7 @@ export default class CiteWidePlugin extends Plugin {
                         
                         url = urlMatch[0];
                         // Generate new hex ID for plain URL
-                        hexId = citationService.getNewHexId();
+                        hexId = citationService.generateHexId();
                     }
 
                     // Check for duplicate citation by URL
@@ -413,7 +412,6 @@ export default class CiteWidePlugin extends Plugin {
                             if (useExisting) {
                                 // Get the full citation text from the existing citation file
                                 const citationText = citationFileService.getCitationText(existingCitation.hexId);
-                                console.log('citationText', citationText);
                                 if (citationText) {
                                     // Replace the selected text with the full citation text
                                     editor.replaceSelection(citationText);
@@ -437,8 +435,7 @@ export default class CiteWidePlugin extends Plugin {
                                     const oldFilepath = `${citationFileService.getCitationsFolder()}/${oldFilename}`;
                                     const oldFile = this.app.vault.getAbstractFileByPath(oldFilepath);
                                     if (oldFile instanceof TFile) {
-                                        await this.app.vault.delete(oldFile);
-                                        console.log(`Deleted old citation file: ${oldFilename}`);
+                                        await this.app.fileManager.trashFile(oldFile);
                                     }
                                     
                                     // Increment usage count for the existing citation
@@ -590,7 +587,7 @@ export default class CiteWidePlugin extends Plugin {
                     footnotes.push(`${citationId}: ${content}`);
                 } else {
                     // For numeric citations, convert to hex format
-                    const hexId = citationService.getNewHexId();
+                    const hexId = citationService.generateHexId();
                     references.push(`[^${hexId}]`);
                     footnotes.push(`[^${hexId}]: ${content}`);
                 }
@@ -625,7 +622,7 @@ export default class CiteWidePlugin extends Plugin {
         // Command to format links in the selected text
         this.addCommand({
             id: 'format-reference-links',
-            name: 'Format Reference Links in Selection',
+            name: 'Format reference links in selection',
             editorCallback: (editor: Editor) => {
                 formatLinksInSelection(editor);
             }
@@ -636,28 +633,28 @@ export default class CiteWidePlugin extends Plugin {
 // Modal for confirming duplicate citation usage
 class ConfirmDuplicateCitationModal extends Modal {
     private existingCitation: CitationMetadata;
-    private onDecision: (useExisting: boolean) => void;
-    constructor(app: App, existingCitation: CitationMetadata, onDecision: (useExisting: boolean) => void) {
+    private onDecision: (useExisting: boolean) => Promise<void>;
+    constructor(app: App, existingCitation: CitationMetadata, onDecision: (useExisting: boolean) => Promise<void>) {
         super(app);
         this.existingCitation = existingCitation;
         this.onDecision = onDecision;
     }
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl('h2', { text: 'Duplicate Citation Detected' });
+        contentEl.createEl('h2', { text: 'Duplicate citation detected' });
         contentEl.createEl('p', { text: `A citation with the same URL already exists (hex ID: ${this.existingCitation.hexId}).` });
         const btnContainer = contentEl.createDiv('modal-button-container');
         new ButtonComponent(btnContainer)
-            .setButtonText('Use Existing')
+            .setButtonText('Use existing')
             .onClick(() => {
-                this.onDecision(true);
+                void this.onDecision(true);
                 this.close();
             });
         new ButtonComponent(btnContainer)
-            .setButtonText('Create New')
+            .setButtonText('Create new')
             .setCta()
             .onClick(() => {
-                this.onDecision(false);
+                void this.onDecision(false);
                 this.close();
             });
     }

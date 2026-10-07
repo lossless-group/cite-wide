@@ -1,31 +1,43 @@
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
+// ESLint flat config — required by ESLint 10.x.
+// Mirrors the rules ObsidianReviewBot enforces on every community-plugin
+// submission. `obsidianmd.configs.recommended` is the review bot's own rule
+// set (eslint-plugin-obsidianmd); the block after it keeps the type-aware
+// rules from context-v/reminders (no-floating-promises, no-base-to-string,
+// no-unnecessary-type-assertion), which need parserOptions.project.
+//
+// See ../../context-v/reminders/Obsidian-Type-Safety.md and
+//     ../../context-v/reminders/Obsidian-Marketplace-Compliance.md
 
-/**
- * Flat config mirroring the rules ObsidianReviewBot enforces on community
- * plugin submissions. Type-aware rules require `parserOptions.project`,
- * which makes lint runs read tsconfig.json — slower on cold start, but
- * the type-aware rules (no-floating-promises, no-base-to-string,
- * no-unnecessary-type-assertion) cannot fire without it.
- *
- * See context-v/reminders/Obsidian-Type-Safety.md §1 for the rule sources
- * and §4 for the local-enforcement rationale.
- */
+import tsParser from '@typescript-eslint/parser';
+import obsidianmd from 'eslint-plugin-obsidianmd';
+
 export default [
     {
-        ignores: ['main.js', 'node_modules/**', 'examples/**', '*.mjs'],
+        // Build outputs, build tooling, examples, tests, node_modules.
+        ignores: [
+            'node_modules/**',
+            'main.js',
+            'styles.css',
+            'examples/**',
+            'scripts/**',
+            'tests/**',
+            '.test-build/**',
+            '*.mjs',
+        ],
     },
+    // Obsidian community-plugin rules — what ObsidianReviewBot enforces
+    // server-side at submission time.
+    ...obsidianmd.configs.recommended,
     {
         files: ['**/*.ts'],
         languageOptions: {
             parser: tsParser,
             parserOptions: {
+                ecmaVersion: 'latest',
+                sourceType: 'module',
                 project: './tsconfig.json',
                 tsconfigRootDir: import.meta.dirname,
             },
-        },
-        plugins: {
-            '@typescript-eslint': tsPlugin,
         },
         linterOptions: {
             reportUnusedDisableDirectives: 'error',
@@ -35,6 +47,21 @@ export default [
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
             '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/no-base-to-string': 'error',
+            '@typescript-eslint/no-misused-promises': 'error',
+            'no-console': ['error', { allow: ['warn', 'error', 'debug'] }],
+            // Brand allowlist for sentence-case so proper nouns in UI
+            // strings (Jina.ai, Dataview, …) aren't lowercased.
+            'obsidianmd/ui/sentence-case': [
+                'error',
+                {
+                    brands: [
+                        'Cite Wide', 'Jina.ai', 'Jina', 'Dataview', 'Obsidian',
+                        'Perplexity', 'Google', 'URL', 'LLM',
+                    ],
+                    acronyms: ['ID', 'URL', 'URLs', 'API', 'LLM', 'AI', 'YAML'],
+                    allowAutoFix: true,
+                },
+            ],
         },
     },
 ];

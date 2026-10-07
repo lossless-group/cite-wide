@@ -1,5 +1,6 @@
 // cite-wide/src/services/urlCitationService.ts
 
+import { requestUrl } from 'obsidian';
 import { asString, isRecord } from '../utils/coerce';
 import { formatCitationDate } from '../utils/citationDate';
 
@@ -89,17 +90,20 @@ export class UrlCitationService {
                 headers['Authorization'] = `Bearer ${this.jinaApiKey}`;
             }
             
-            const response = await fetch(readerUrl, {
+            // requestUrl, not fetch: Obsidian's request API works on every
+            // platform and is what the review bot requires.
+            const response = await requestUrl({
+                url: readerUrl,
                 method: 'GET',
-                headers
+                headers,
+                throw: false,
             });
 
-            if (!response.ok) {
-                throw new Error(`Reader API request failed: ${response.status} ${response.statusText}`);
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(`Reader API request failed: ${response.status}`);
             }
 
-            const data: unknown = await response.json();
-            console.log('Reader API response:', data);
+            const data: unknown = response.json;
 
             // Extract citation data from the Reader API response
             const citationData = this.parseReaderResponse(data, url);
@@ -154,8 +158,6 @@ export class UrlCitationService {
 
             const siteName = (meta && asString(meta['og:site_name']))
                 || this.extractSiteNameFromUrl(originalUrl);
-
-            console.log('Extracted citation data:', { title, author, date, url: originalUrl, siteName });
 
             return {
                 title,

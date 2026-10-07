@@ -61,7 +61,7 @@ export class CitationFileService {
 
             const existing = this.app.vault.getAbstractFileByPath(filepath);
             if (existing instanceof TFile) {
-                await this.app.vault.delete(existing);
+                await this.app.fileManager.trashFile(existing);
             }
 
             const metadata = this.metadataFromCitationData(hexId, citationData, sourceFile);
@@ -363,9 +363,9 @@ export class CitationFileService {
             if (titleMatch && titleMatch[1]) metadata.title = titleMatch[1];
 
             const authorPatterns = [
-                /by\s+([^,\.]+)/i,
-                /author[:\s]+([^,\.]+)/i,
-                /written\s+by\s+([^,\.]+)/i,
+                /by\s+([^,.]+)/i,
+                /author[:\s]+([^,.]+)/i,
+                /written\s+by\s+([^,.]+)/i,
             ];
             for (const pattern of authorPatterns) {
                 const match = referenceText.match(pattern);

@@ -24,10 +24,8 @@ export class DedupeByUrlModal extends Modal {
         const modalContainer = contentEl.closest('.modal-container');
         const modalContent = contentEl.closest('.modal-content');
         if (modalContainer instanceof HTMLElement && modalContent instanceof HTMLElement) {
-            modalContainer.style.width = '95vw';
-            modalContainer.style.maxWidth = 'none';
-            modalContent.style.width = '100%';
-            modalContent.style.maxWidth = 'none';
+            modalContainer.addClass('cite-wide-modal-container-wide');
+            modalContent.addClass('cite-wide-modal-content-wide');
         }
         contentEl.addClass('cite-wide-modal');
 
@@ -49,7 +47,7 @@ export class DedupeByUrlModal extends Modal {
         });
 
         const applyBtn = header.createEl('button', {
-            text: 'Apply Dedup',
+            text: 'Apply dedup',
             cls: 'mod-cta cite-wide-convert-all-btn',
         });
         applyBtn.addEventListener('click', () => {
@@ -67,9 +65,8 @@ export class DedupeByUrlModal extends Modal {
         const headerEl = groupEl.createDiv('cite-wide-group-header');
         const headerContent = headerEl.createDiv('cite-wide-group-header-content');
 
-        const checkbox = headerContent.createEl('input', { type: 'checkbox' });
+        const checkbox = headerContent.createEl('input', { type: 'checkbox', cls: 'cite-wide-dedupe-checkbox' });
         checkbox.checked = true;
-        checkbox.style.marginRight = '0.5rem';
         checkbox.addEventListener('change', () => {
             this.selected.set(idx, checkbox.checked);
         });
@@ -81,13 +78,12 @@ export class DedupeByUrlModal extends Modal {
         });
 
         const removedList = group.duplicateHexIds.map(h => `[^${h}]`).join(', ');
-        headerContent.createEl('span', {
+        headerContent.createSpan({
             text: `Keep [^${group.canonicalHexId}], remove ${removedList}`,
             cls: 'cite-wide-source-link',
         });
 
-        const content = groupEl.createDiv('cite-wide-group-content');
-        content.style.display = 'block';
+        const content = groupEl.createDiv('cite-wide-group-content cite-wide-group-content-block');
 
         for (const occ of group.occurrences) {
             this.renderOccurrence(content, occ, group);
@@ -103,18 +99,17 @@ export class DedupeByUrlModal extends Modal {
         const lineInfo = instanceEl.createDiv('cite-wide-line-info');
 
         if (occ.isReference) {
-            lineInfo.createEl('span', {
+            lineInfo.createSpan({
                 text: 'Reference',
                 cls: 'cite-wide-badge cite-wide-badge-reference',
             });
-            lineInfo.createEl('span', { text: ' • ' });
+            lineInfo.createSpan({ text: ' • ' });
         }
 
-        const hexLabel = lineInfo.createEl('span', {
+        lineInfo.createSpan({
             text: `[^${occ.hexId}]${isCanonical ? ' (keep)' : ''}`,
-            cls: 'cite-wide-badge',
+            cls: 'cite-wide-badge cite-wide-dedupe-hex',
         });
-        hexLabel.style.marginRight = '0.5rem';
 
         const lineLink = lineInfo.createEl('a', {
             text: `Line ${occ.lineNumber}`,
@@ -126,11 +121,11 @@ export class DedupeByUrlModal extends Modal {
             this.scrollToOccurrence(occ);
         });
 
-        lineInfo.createEl('span', { text: ': ' });
+        lineInfo.createSpan({ text: ': ' });
 
         const preview = occ.lineContent.trim();
         const previewText = preview.length > 120 ? `${preview.substring(0, 120)}…` : preview;
-        lineInfo.createEl('span', {
+        lineInfo.createSpan({
             text: previewText,
             cls: 'cite-wide-line-preview',
         });
@@ -174,7 +169,7 @@ export class DedupeByUrlModal extends Modal {
             this.editor.scrollIntoView({ from, to }, true);
             this.editor.focus();
 
-            setTimeout(() => this.close(), 100);
+            window.setTimeout(() => this.close(), 100);
         } catch (error) {
             console.error('Error scrolling to occurrence:', error);
             this.close();

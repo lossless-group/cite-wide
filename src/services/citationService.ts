@@ -28,14 +28,7 @@ export interface CitationGroup {
 export class CitationService {
     private usedHexIds: Set<string> = new Set();
 
-    /**
-     * @deprecated Use generateHexId instead
-     */
-    public getNewHexId(): string {
-        return this.generateHexId();
-    }
-
-    private generateHexId(): string {
+    public generateHexId(): string {
         let hexId: string;
         do {
             // Use base 36 (0-9, a-z) for more character variety
@@ -61,7 +54,6 @@ export class CitationService {
     }
 
     public extractCitations(content: string): CitationGroup[] {
-        console.log('Debug: Starting extractCitations');
         // Match both numeric citations [1] and hex citations [^1]
         const numericCitationPattern = /\[(\d+)\](?!:)/g;
         const hexCitationPattern = /\[\^([a-f0-9]+)\](?!:)/g;
@@ -113,7 +105,6 @@ export class CitationService {
                         const index = content.indexOf(match[0], matchIndex);
                         
                         if (index >= 0) {
-                            console.log('Debug: Found hex citation:', match[0], 'with number:', match[1]);
                             matches.push({
                                 number: `hex_${match[1]}`, // Prefix to distinguish from numeric
                                 original: match[0],
@@ -153,7 +144,6 @@ export class CitationService {
             // Check for numeric reference definitions [1]: text
             let refMatch = line.match(/^\s*\[(\d+)\]\s*:?\s*(.*)/);
             if (refMatch && refMatch[1]) {
-                console.log('Debug: Found numeric reference definition:', refMatch[0]);
                 const number = refMatch[1];
                 
                 // Find the corresponding citation group
@@ -198,23 +188,10 @@ export class CitationService {
                     
                     referenceDefinitions.set(number, refCitationMatch);
                     group.matches.push(refCitationMatch);
-                } else {
-                    console.log('Debug: No corresponding citation group found for hex reference:', number);
-                }
-            } else {
-                // Debug: Check if the line looks like a hex reference but didn't match
-                if (line.trim().match(/^\[\^[a-f0-9]+\]/)) {
-                    console.log('Debug: Line looks like hex reference but didn\'t match:', line);
                 }
             }
         }
 
-        console.log('Debug: Final citation groups:', Array.from(groups.values()).map(g => ({
-            number: g.number,
-            matchCount: g.matches.length,
-            references: g.matches.filter(m => m.isReference).length
-        })));
-        
         return Array.from(groups.values());
     }
 
@@ -411,7 +388,7 @@ export class CitationService {
             
             // Handle multiple citations before punctuation (e.g., [^123][^456], -> , [^123] [^456])
             // This regex captures one or more citations followed by comma or period
-            processedLine = processedLine.replace(/((?:\[[^\]]+\])+)([.,])/g, (_, citations, punctuation) => {
+            processedLine = processedLine.replace(/((?:\[[^\]]+\])+)([.,])/g, (_: string, citations: string, punctuation: string) => {
                 // Split multiple citations and ensure proper spacing
                 const citationMatches = citations.match(/\[[^\]]+\]/g) || [];
                 const spacedCitations = citationMatches.join(' ');
@@ -419,7 +396,7 @@ export class CitationService {
             });
             
             // Also handle citations that are already after punctuation but need spacing normalization
-            processedLine = processedLine.replace(/([.,:;!?])\s*((?:\[\^[^\]]+\])+)/g, (_, punctuation, citations) => {
+            processedLine = processedLine.replace(/([.,:;!?])\s*((?:\[\^[^\]]+\])+)/g, (_: string, punctuation: string, citations: string) => {
                 // Split multiple citations and ensure proper spacing
                 const citationMatches = citations.match(/\[\^[^\]]+\]/g) || [];
                 const spacedCitations = citationMatches.join(' ');
