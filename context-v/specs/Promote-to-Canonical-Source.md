@@ -2,8 +2,8 @@
 site_uuid: 174977b4-e5ae-4728-94a6-63585cb5ff01
 hex_code: 0xwh8x
 title: "Promote to Canonical Source"
-lede: "One command turns a footnote you'll cite again — a book, a report — into a rich, reusable record in the Citations folder."
-summary: "Spec for cite-wide's 'Promote to canonical source' command (v1). It upgrades a single hex citation from the light Citations format to the canonical schema in Lossless-Citation-Standards.md, filling only the deterministic and metadata-derivable fields; AI-required fields and content archival are out of scope. Implements the 'future button' named in Maximize-Data-Collection-on-Cannonical-Sources.md."
+lede: "One command turns a source you'll cite again — a book, a report — into a rich record with its file and full text in your vault."
+summary: "Spec for cite-wide's 'Promote to canonical source' command (v1). It upgrades a single hex citation from the light Citations format to the canonical schema in Lossless-Citation-Standards.md, filling the deterministic and metadata-derivable fields in two tiers (a free in-plugin extractor ported from Metafetch, then Jina Reader), downloading the source file, and importing its text as markdown. Phase 2 (specified, not built) adds an AI agent that summarizes and links the source to existing notes and tags. Implements the 'future button' named in Maximize-Data-Collection-on-Cannonical-Sources.md."
 publish: true
 date_created: 2026-10-06
 date_modified: 2026-10-06
@@ -14,7 +14,7 @@ authors:
   - Michael Staton
 augmented_with:
   - Claude Code on Claude Opus 5.5
-at_semantic_version: 0.0.0.1
+at_semantic_version: 0.0.1.0
 status: Signed-Off
 tags:
   - Spec
@@ -38,7 +38,8 @@ This is the "Promote to Canonical Source" button that [[Maximize-Data-Collection
 2. **Gather what's knowable without AI:**
    - **Parse the footnote** for title (a quoted or linked title), URL, year or date, and the trailing publisher/author segments.
    - **Read the existing light file**, if `Citations/<id>.md` exists. Keep its fields and `filesUsedIn`.
-   - **Fetch the page's metadata**, if there's a URL. Use one `requestUrl` GET with `throw: false` and parse `<meta>` tags with no new dependency. Read `og:title`, `og:site_name`, `og:image`, `article:published_time`, `author` / `article:author`, and the scholarly tags `citation_title`, `citation_author`, `citation_publication_date`, and `citation_publisher`. A failed or slow fetch (10 s timeout) falls back to the parsed values.
+   - **Tier 1, the free metadata extractor.** Port Metafetch's `src/services/directFetchService.ts` into Cite Wide as a **copy**, not an import, so each plugin stays standalone. Credit Metafetch in a header comment. It parses `<meta>` tags with no dependencies: Open Graph, `article:*`, `author`, the scholarly `citation_*` tags (including repeated `citation_author`), `<title>`, and the favicon, and normalizes author names and dates. Use one `requestUrl` GET with `throw: false` and a 10 s timeout.
+   - **Tier 2, Jina Reader** (`r.jina.ai`, already wired in `urlCitationService`; the key is optional but raises rate limits). Use it when tier 1 leaves the title or authors empty, and always for the text import below. Firecrawl is a possible later provider, behind its own optional key; not in v1.
 3. **Confirm in a modal** with these fields prefilled and editable:
    - title
    - subtitle
@@ -49,7 +50,11 @@ This is the "Promote to Canonical Source" button that [[Maximize-Data-Collection
    - URL
 
    Then **Promote** or **Cancel**.
-4. **Write `Citations/<id>.md`.** Create it or upgrade it in place via `processFrontMatter`. The body is kept if it exists.
+4. **Capture the content** (checkbox in the modal, on by default):
+   - **The original file.** If the URL serves a downloadable document (`content-type` PDF, EPUB, DOCX, PPTX, or XLSX, or a URL ending in one of those), save its bytes to `Citations/_files/<id>.<ext>` and record the path in `downloaded_content_path`.
+   - **The source text, as markdown.** Import it through Jina Reader, which handles both web pages and PDFs, into `Citations/_text/<id>.md`, a plain note with a backlink to the citation, and record that path in `source_text_path`. If Jina is unavailable, skip the import and say so in the notice; the citation is still promoted.
+   - Both are skipped quietly when there's no URL.
+5. **Write `Citations/<id>.md`.** Create it or upgrade it in place via `processFrontMatter`. The body is kept if it exists.
 
 ## Fields written (v1)
 
@@ -69,20 +74,35 @@ The canonical file **keeps every light-format key** (`hexId`, `title`, `url`, `r
 | `date_recently_accessed` | today, if the fetch succeeded |
 | `piece_og_image` | `og:image` |
 | `cited_in_files` | mirrors `filesUsedIn` |
+| `publisher_favicon_url` | tier 1 favicon |
+| `downloaded_content_path` | `Citations/_files/<id>.<ext>`, when a file was downloaded |
+| `source_text_path` | `Citations/_text/<id>.md`, when text was imported (an addition to the standard: the markdown text, distinct from `structured_data_path`'s JSON) |
 
 **Promoting again is safe.** Write-once fields keep their values, and the user's edits from the modal win over fetched values.
 
+## Phase 2 (specified, not built): the enrichment agent
+
+Once a canonical source has its text, an LLM agent (Claude or GPT, with the operator's key) enriches it. It would be a **separate command**, "Enrich canonical source", so promotion stays fast, free, and deterministic.
+
+- **Summarize** the source into the citation file's body, under `## Summary`.
+- **Link it into the vault.** Wikilink the people, organizations, concepts, and tools it mentions, **preferring notes that already exist.** The agent gets an inventory of existing note titles and aliases, and creates a new link only when nothing fits.
+- **Tag it, preferring existing tags.** The agent gets the vault's tag list (from `metadataCache`) and reuses tags before inventing new ones. This is also where `publisher_type` and `tags` from the standard get filled.
+- **Instructions are a prompt file.** It's bundled in the plugin as the default, and a vault-side override can replace it, following the Perplexed preambles pattern: vault files override, and bundled defaults keep the plugin working on its own.
+- Open questions for that phase: which provider and model by default; how large a vault inventory to send (title list vs. retrieval); and whether to show a review diff before writing.
+
 ## Out of scope for v1
 
-- AI-required fields (`publisher_type`, `tags`, `edition_or_version`, the `api_*` fields): left absent for a later agent pipeline.
-- Content archival (`downloaded_content_path`, `structured_data_path`): not wanted. Obsidian handles large vaults fine, and the operator doesn't need saved copies.
+- The enrichment agent (Phase 2 above).
+- AI-only fields (`publisher_type`, `tags`, `edition_or_version`, the `api_*` fields) and `structured_data_path`.
+- Firecrawl as a provider.
 - Bulk promotion.
 
 ## Acceptance
 
 - Tests, red first:
   - footnote parsing on real vault shapes (the OpenCloud report line, a book, a plain URL)
-  - the `<meta>` extractor
+  - the ported tier-1 extractor (multi-author `citation_author`, both attribute orders, entities, favicon)
+  - content capture: a PDF response is saved to `_files/` with the right extension; Jina text goes to `_text/` with a backlink; a Jina failure still promotes
   - field assembly (write-once fields kept on re-promote; light keys preserved; `canonical: true` set)
   - command registration (15 commands)
 - Every gate: tests, tsc, ESLint 0/0, build, `CI=true pnpm@10 install --frozen-lockfile`.
