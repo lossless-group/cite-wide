@@ -29,7 +29,7 @@ export class LlmCitationsModal extends Modal {
     constructor(app: App, editor: Editor) {
         super(app);
         this.editor = editor;
-        this.content = editor.getValue();
+        this.content = llmCitationParserService.normalizeInlineUrlCitations(editor.getValue());
         this.parseResult = llmCitationParserService.parse(this.content);
         this.mapping = llmCitationParserService.proposeHexMapping(this.parseResult);
     }

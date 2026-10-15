@@ -92,7 +92,53 @@ const NUM_INLINE_MULTI_COMMA_RE = /\[(\d+(?:\s*,\s*\d+)+)\]/g;
 const REFDEF_HEX_RE = /^(\s*)\[\^([a-z0-9]+)\]:\s*(.*)$/i;
 const REFDEF_NUM_RE = /^(\s*)\[(\d+)\](:?)\s+(.*)$/;
 
+// Google AI's inline-URL form (2026-10): each sentence ends with its own
+// cluster `[1] (https://a), [2] (https://b)` and numbering restarts at 1 for
+// every cluster, so the numbers carry no meaning across the document. URLs
+// may contain one level of balanced parens (Wikipedia-style).
+const INLINE_URL_ENTRY_SRC = String.raw`\[(\d+)\] ?\((https?:\/\/(?:[^\s()]|\([^\s()]*\))+)\)`;
+const INLINE_URL_CLUSTER_RE = new RegExp(`${INLINE_URL_ENTRY_SRC}(?:\\s*,\\s*${INLINE_URL_ENTRY_SRC})*`, 'g');
+const INLINE_URL_ENTRY_RE = new RegExp(INLINE_URL_ENTRY_SRC, 'g');
+
 export class LlmCitationParserService {
+    /**
+     * Rewrite Google AI's inline-URL citation clusters into the numeric form
+     * the rest of the pipeline understands: an inline `[n1, n2]` per cluster
+     * and one `[n] [url](url)` ref def per distinct URL, appended at the end.
+     * The same URL cited in several clusters gets one number. New numbers
+     * start above any `[N]` already present so they can't collide with an
+     * old-style reference list in the same content. Also turns Google's `•`
+     * bullets into markdown list items. Content without clusters is returned
+     * unchanged, so callers can run it on anything before `parse`.
+     */
+    public normalizeInlineUrlCitations(content: string): string {
+        if (!new RegExp(INLINE_URL_CLUSTER_RE.source).test(content)) return content;
+
+        let next = 1;
+        // Count only numbers outside the clusters: theirs are about to be replaced.
+        for (const m of content.replace(INLINE_URL_CLUSTER_RE, '').matchAll(/\[(\d+)\]/g)) {
+            next = Math.max(next, parseInt(m[1] ?? '0', 10) + 1);
+        }
+        const urlToNum = new Map<string, number>();
+
+        const body = content.replace(INLINE_URL_CLUSTER_RE, (cluster: string) => {
+            const nums: number[] = [];
+            for (const entry of cluster.matchAll(INLINE_URL_ENTRY_RE)) {
+                const url = entry[2] ?? '';
+                let n = urlToNum.get(url);
+                if (n === undefined) {
+                    n = next++;
+                    urlToNum.set(url, n);
+                }
+                if (!nums.includes(n)) nums.push(n);
+            }
+            return `[${nums.join(', ')}]`;
+        }).replace(/^(\s*)•\s*/gm, '$1- ');
+
+        const refDefs = [...urlToNum].map(([url, n]) => `[${n}] [${url}](${url})`);
+        return `${body.trimEnd()}\n\n${refDefs.join('\n')}\n`;
+    }
+
     public parse(content: string): ParseResult {
         const lines = content.split('\n');
         const tokens: CitationToken[] = [];

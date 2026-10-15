@@ -72,7 +72,7 @@ export class PasteLlmContentModal extends Modal {
 
         // Big textarea: where the user pastes the LLM output verbatim.
         this.textarea = contentEl.createEl('textarea', { cls: 'cite-wide-paste-textarea' });
-        this.textarea.placeholder = 'Paste LLM output here. Inline citations like [1, 2, 3] (Google AI) or [1][2] (Perplexity) and reference lists like [1] [title](URL) will be converted to lossless [^hex] format on insert. Existing hex citations in the active document are accounted for so generated hex IDs never collide.';
+        this.textarea.placeholder = 'Paste LLM output here. Inline citations like [1] (URL), [2] (URL) (Google AI), [1, 2, 3] (older Google AI) or [1][2] (Perplexity) and reference lists like [1] [title](URL) will be converted to lossless [^hex] format on insert. Existing hex citations in the active document are accounted for so generated hex IDs never collide.';
 
         // Footer with action buttons.
         const footer = contentEl.createDiv('cite-wide-paste-footer');
@@ -93,7 +93,9 @@ export class PasteLlmContentModal extends Modal {
     }
 
     private async parseAndInsert(): Promise<void> {
-        const pasted = this.textarea.value;
+        // Google AI's per-sentence `[1] (url)` clusters become a standard
+        // numeric reference list before the shared pipeline runs.
+        const pasted = llmCitationParserService.normalizeInlineUrlCitations(this.textarea.value);
         if (!pasted.trim()) {
             new Notice('Nothing to parse — textarea is empty.');
             return;
