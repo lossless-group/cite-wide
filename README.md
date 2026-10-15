@@ -265,6 +265,11 @@ See `examples/dataview-citations-examples.md` for comprehensive Dataview query e
 
 # Releases
 
+**0.3.1** — 2026-10-15 · Google AI pastes convert cleanly again
+
+- **Fixed:** Google AI answers now cite with `[1] (url), [2] (url)` after each sentence and no source list. *Paste LLM content* and *Parse LLM citations* turn these into `[^hex]` footnotes, one per distinct source, and turn `•` bullets into markdown lists.
+- Full notes: [`changelog/releases/0.3.1.md`](changelog/releases/0.3.1.md).
+
 **0.3.0** — 2026-10-06 · requires Obsidian 1.13
 
 - **Fixed:** citations with IDs using letters past "f" (about 98% of them) were invisible to Show citations, Save all, and the conversion commands; empty citation files are now filled from their footnotes.

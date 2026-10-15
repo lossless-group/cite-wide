@@ -1,7 +1,7 @@
 {
 	"id": "cite-wide",
 	"name": "Cite Wide",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"minAppVersion": "1.13.0",
 	"description": "Convert numeric footnotes into stable hex identifiers, dedupe citations by URL, and parse LLM-pasted research into a canonical reference format.",
 	"author": "The Lossless Group",
