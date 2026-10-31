@@ -4,12 +4,15 @@ lede: >-
   Per-field reference for the acquisition agent: source of truth, cheap path, expensive fallback, validation rule, and failure behavior.
 date_authored_initial_draft: 2026-05-01
 date_authored_current_draft: 2026-05-01
+date_created: 2026-05-01
+date_modified: 2026-08-18
 status: Draft
 category: Blueprint
 applies_to: cite-wide canonicalization pipeline
 authors:
   - Michael Staton
-augmented_with: Claude Code (Opus 4.7, 1M context)
+augmented_with:
+  - Claude Code (Opus 4.7, 1M context)
 tags:
   - Field-Reference
   - Acquisition-Specs

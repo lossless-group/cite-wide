@@ -4,12 +4,15 @@ lede: >-
   The schema layer: what fields exist, why each exists, and how they outlive any one rendering target. The WHAT and WHY, not the HOW.
 date_authored_initial_draft: 2026-05-01
 date_authored_current_draft: 2026-05-01
+date_created: 2026-05-01
+date_modified: 2026-10-06
 status: Draft
 category: Blueprint
 applies_to: cite-wide Obsidian plugin + downstream consumers (Investment Memo Orchestrator, future Vector DB / RAG pipelines, multi-site content publishing)
 authors:
   - Michael Staton
-augmented_with: Claude Code (Opus 4.7, 1M context)
+augmented_with:
+  - Claude Code (Opus 4.7, 1M context)
 tags:
   - Citation-Schema
   - YAML-Frontmatter

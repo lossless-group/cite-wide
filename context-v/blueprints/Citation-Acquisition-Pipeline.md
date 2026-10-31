@@ -4,12 +4,15 @@ lede: >-
   The HOW for filling the Lossless Citation schema: decouples the cheap capture moment from the expensive canonicalization moment.
 date_authored_initial_draft: 2026-05-01
 date_authored_current_draft: 2026-05-01
+date_created: 2026-05-01
+date_modified: 2026-08-18
 status: Draft
 category: Blueprint
 applies_to: cite-wide Obsidian plugin + companion MCP server (to be built)
 authors:
   - Michael Staton
-augmented_with: Claude Code (Opus 4.7, 1M context)
+augmented_with:
+  - Claude Code (Opus 4.7, 1M context)
 tags:
   - Agent-Architecture
   - MCP-Server
