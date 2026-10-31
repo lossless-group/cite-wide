@@ -20,6 +20,7 @@ tags:
   - Spec
   - Citations
   - Canonical-Sources
+type: Specs
 ---
 
 # Promote to Canonical Source

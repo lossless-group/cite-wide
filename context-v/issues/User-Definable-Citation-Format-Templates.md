@@ -10,7 +10,7 @@ augmented_with:
   - Claude Code on Claude Opus 5 (1M context)
 semantic_version: 0.0.0.1
 status: Open
-type: issue
+type: Issues
 target_repo: cite-wide
 applies_to: "Every command that writes a reference definition or a citation file — Extract citation from URL, Paste LLM Content, Convert LLM Citations, Save citation to file"
 related:

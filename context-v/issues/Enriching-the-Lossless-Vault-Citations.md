@@ -22,6 +22,7 @@ tags:
   - Citations
   - Canonical-Sources
   - Metadata-Extraction
+type: Issues
 ---
 
 # Issue: Enriching the Lossless Vault's 75 Citations

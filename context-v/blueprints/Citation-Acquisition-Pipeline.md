@@ -22,6 +22,7 @@ sibling_docs:
 site_uuid: 00d4935e-c156-4fc9-b699-36b59a08ca82
 hex_code: w9cyuy
 publish: true
+type: Blueprints
 ---
 
 > **How to read this doc.** Section order is implementation order. **Architecture → Tool Envelope → Phases → Output Contract → Triggers → State → Failure Modes → Open Decisions.** Skip ahead if you already know the architecture; do not skip ahead if you're filling in TODOs.

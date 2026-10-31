@@ -15,6 +15,7 @@ date_authored_initial_draft: 2024-09-06
 date_authored_current_draft: 2024-09-06
 lede: "Hex codes instead of numerics so pasted sources never collide — plus exact spacing and the Claude cited_text blockquote the web strips."
 summary: "The open spec cite-wide implements. First half: hex-code identifiers, the exact inline spacing rules Obsidian's hover-and-jump behavior depends on, reference-section requirements, and the Lossless standard reference-definition shape. Second half extends the spec to Anthropic's Citations API — web-search versus document-grounded citations, the trailing cited_text blockquote convention and its web-render stripping rule, bibliographic sourcing for canonical versus ad-hoc sources, and one-refdef-per-location for multi-location citations. Any change to citation parsing or rendering must conform to this file."
+type: Reminders
 ---
 
 # Always use the Lossless Citation Spec for Cite Wide.

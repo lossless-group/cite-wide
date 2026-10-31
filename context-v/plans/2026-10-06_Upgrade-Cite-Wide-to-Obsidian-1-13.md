@@ -21,6 +21,7 @@ tags:
   - Obsidian-Plugin
   - Obsidian-1-13
   - Release-0-3-0
+type: Plans
 ---
 
 # Plan — Upgrade Cite Wide to Obsidian 1.13 (0.3.0)

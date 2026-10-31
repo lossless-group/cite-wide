@@ -20,6 +20,7 @@ tags:
   - Spec
   - Citations
   - Metadata-Extraction
+type: Specs
 ---
 
 # Enrich Citations

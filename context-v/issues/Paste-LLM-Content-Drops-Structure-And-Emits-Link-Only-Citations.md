@@ -10,7 +10,7 @@ augmented_with:
   - Claude Code on Claude Opus 5 (1M context)
 semantic_version: 0.0.0.1
 status: Open
-type: issue
+type: Issues
 target_repo: cite-wide
 applies_to: "Paste LLM Content (Convert Citations on Insert); also the post-hoc Convert LLM Citations command, which shares the same parser"
 related:
