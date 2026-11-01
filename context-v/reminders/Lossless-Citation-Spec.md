@@ -1,7 +1,7 @@
 ---
 title: "The Lossless Citation Open Specification"
 date_created: 2024-09-06
-date_modified: 2025-04-22
+date_modified: 2026-11-01
 publish: true
 authors:
  - Michael Staton
@@ -12,7 +12,7 @@ tags:
 site_uuid: b706d1c2-9a7d-4042-9ac3-bda864e91277
 hex_code: 5voo72
 date_authored_initial_draft: 2024-09-06
-date_authored_current_draft: 2024-09-06
+date_authored_current_draft: 2026-11-01
 lede: "Hex codes instead of numerics so pasted sources never collide — plus exact spacing and the Claude cited_text blockquote the web strips."
 summary: "The open spec cite-wide implements. First half: hex-code identifiers, the exact inline spacing rules Obsidian's hover-and-jump behavior depends on, reference-section requirements, and the Lossless standard reference-definition shape. Second half extends the spec to Anthropic's Citations API — web-search versus document-grounded citations, the trailing cited_text blockquote convention and its web-render stripping rule, bibliographic sourcing for canonical versus ad-hoc sources, and one-refdef-per-location for multi-location citations. Any change to citation parsing or rendering must conform to this file."
 type: Reminders
@@ -81,7 +81,17 @@ Reference sections should:
 
 ## Lossless Standard Reference Formatting
 ```markdown
-[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. [Title of the source](url). Source Publisher Name || [Source Publisher Name](url). Accessed {Month Day, Year}.
+[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. Source Publisher Name || [Source Publisher Name](url). [Title of the source](url). Updated: 2025, Feb 02. Accessed {Month Day, Year}.
+```
+
+The leading date is when the source was published. The publisher comes before the title. Leave out anything you don't know rather than guessing, and only write `Updated:` when it differs from the published date.
+
+### Tool-generated citations
+
+Say `Accessed` only when a person went to the source. When a tool retrieved it during a run, use `Generated:` with the date of that run, and credit the provider last:
+
+```markdown
+[^F1]: 2019, Sep 10. [PR Newswire](https://www.prnewswire.com/). [Title of the source](url). Updated: 2019, Sep 12. Generated: 2026, Nov 01. [Fireround](https://fireround.dev) API response.
 ```
 
 
@@ -113,7 +123,7 @@ When Claude cites a web search result it returns per citation:
 `url` and `title` map directly into the standard URL format above. The new addition is `cited_text`, appended as a trailing markdown blockquote on the same line:
 
 ```markdown
-[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. [Title](url). Publisher Name || [Publisher Name](url). Accessed {Mon Day, Year}. > {cited_text}
+[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. Publisher Name || [Publisher Name](url). [Title](url). Accessed {Mon Day, Year}. > {cited_text}
 ```
 
 ### Cited-text rules

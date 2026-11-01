@@ -5,7 +5,7 @@ lede: >-
 date_authored_initial_draft: 2026-05-01
 date_authored_current_draft: 2026-05-01
 date_created: 2026-05-01
-date_modified: 2026-10-06
+date_modified: 2026-11-01
 status: Draft
 category: Blueprint
 applies_to: cite-wide Obsidian plugin + downstream consumers (Investment Memo Orchestrator, future Vector DB / RAG pipelines, multi-site content publishing)
@@ -78,10 +78,12 @@ Lossless citations need to render usefully into multiple downstream conventions.
 Our house style for footnote-form citations in Markdown. See `context-v/reminders/Lossless-Citation-Spec.md` for the inline-citation rules (`[^hexcode]` placement, spacing, reference-section formatting). The reference-line shape is:
 
 ```markdown
-[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. [Title of the source](url). Source Publisher Name || [Source Publisher Name](url). Accessed {Month Day, Year}.
+[^{hexcode}]: 2025, Jan 25. {Author Surname, First Name}. Source Publisher Name || [Source Publisher Name](url). [Title of the source](url). Updated: 2025, Feb 02. Accessed {Month Day, Year}.
 ```
 
-Maps to the schema as: `date_published` (split into year/month/day), `authors[0]`, `title`, `recently_accessed_at_url` (what we link to), `publisher` (+ optional `publisher_url`), `date_recently_accessed`.
+Maps to the schema as: `date_published` (split into year/month/day), `authors[0]`, `publisher` (+ optional `publisher_url`), `title`, `recently_accessed_at_url` (what we link to), `date_recently_accessed`.
+
+A citation a tool retrieved during a run says `Generated:` with the date of that run in place of `Accessed`, and credits the provider last. See the spec for the exact line.
 
 ### Obsidian-Native
 
