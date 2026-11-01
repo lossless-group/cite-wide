@@ -265,6 +265,8 @@ See `examples/dataview-citations-examples.md` for comprehensive Dataview query e
 
 # Releases
 
+**0.3.2** — 2026-11-01 · docs only: the citation spec puts the publisher before the title and adds `Generated:` for tool-made citations. [Notes](changelog/releases/0.3.2.md).
+
 **0.3.1** — 2026-10-15 · Google AI pastes convert cleanly again
 
 - **Fixed:** Google AI answers now cite with `[1] (url), [2] (url)` after each sentence and no source list. *Paste LLM content* and *Parse LLM citations* turn these into `[^hex]` footnotes, one per distinct source, and turn `•` bullets into markdown lists.
